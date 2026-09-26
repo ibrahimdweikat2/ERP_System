@@ -28,7 +28,11 @@ if $PULL; then
 fi
 
 echo "== Backend dependencies =="
-(cd backend && composer install --no-dev --optimize-autoloader --no-interaction --no-progress)
+# Composer runs as ec2-user but Laravel's cache folder belongs to apache, so the package
+# discovery step that writes there runs separately as apache.
+sudo chown -R apache:apache backend/storage backend/bootstrap/cache
+(cd backend && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts)
+art package:discover --ansi
 
 echo "== Frontend build =="
 (cd frontend && npm ci --no-audit --no-fund && NODE_OPTIONS=--max-old-space-size=1536 npm run build)

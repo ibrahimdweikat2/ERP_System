@@ -124,6 +124,9 @@ echo "== 8/8 Permissions =="
 # Code belongs to the deploy user; only storage and cache are writable by the web app (apache).
 chown -R "$DEPLOY_USER":"$DEPLOY_USER" "$APP_DIR"
 chown -R apache:apache "$APP_DIR/backend/storage" "$APP_DIR/backend/bootstrap/cache"
+# Group-writable with the group inherited, so ec2-user (member of apache) can also write there.
+chmod -R g+rwX "$APP_DIR/backend/storage" "$APP_DIR/backend/bootstrap/cache"
+find "$APP_DIR/backend/storage" "$APP_DIR/backend/bootstrap/cache" -type d -exec chmod g+s {} +
 chmod 755 "$(dirname "$APP_DIR")" "$APP_DIR"
 usermod -aG apache "$DEPLOY_USER"
 if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce)" = "Enforcing" ]; then
