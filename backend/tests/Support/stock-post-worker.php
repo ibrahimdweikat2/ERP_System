@@ -1,0 +1,19 @@
+<?php
+
+use App\Domains\Inventory\Actions\PostStockDocument;
+use App\Domains\Inventory\Enums\StockDocumentType;
+use App\Support\BusinessException;
+use Illuminate\Contracts\Console\Kernel;
+
+require __DIR__.'/../../vendor/autoload.php';
+$app = require __DIR__.'/../../bootstrap/app.php';
+$app->make(Kernel::class)->bootstrap();
+if (! str_ends_with(config('database.connections.mysql.database'), '_test')) {
+    throw new RuntimeException('Test database required.');
+}
+try {
+    $doc = app(PostStockDocument::class)->execute(StockDocumentType::from($argv[1]), (int) $argv[2], (int) $argv[3], (int) $argv[4]);
+    echo 'POSTED:'.$doc->document_no;
+} catch (BusinessException $e) {
+    echo 'REJECTED:'.$e->errorCode;
+}

@@ -1,0 +1,135 @@
+# «دفتر» on an Azure VM with 1 GB RAM (free B2ats v2 / B1s), in /opt/daftar next to its .env.
+# Internet → Caddy (HTTPS, automatic certificate) → Nginx (React app + /api) → Laravel (php-fpm).
+# Database: Azure Database for MySQL (recommended, free B1ms for 12 months), or a small MySQL
+# on the VM itself with:  docker compose --profile localdb up -d   (and DB_HOST=db in .env).
+# Images are built on the Windows PC and loaded here by deploy.ps1, so nothing is built on the VM.
+name: daftar
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-laravel: &laravel
+  image: daftar-api
+  pull_policy: never
+  env_file: .env
+  volumes:
+    - erp-storage:/var/www/html/storage
+  restart: unless-stopped
+  logging: *logging
+
+services:
+  app:
+    <<: *laravel
+    environment:
+      ERP_ROLE: app
+    mem_limit: 400m
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 9000) ? 0 : 1);'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+
+  queue:
+    <<: *laravel
+    environment:
+      ERP_ROLE: worker
+    command: ["php", "artisan", "queue:work", "database", "--queue=default,exports,notifications", "--sleep=3", "--tries=2", "--timeout=300", "--max-time=3600"]
+    mem_limit: 300m
+    depends_on:
+      app:
+        condition: service_healthy
+
+  maintenance:
+    <<: *laravel
+    environment:
+      ERP_ROLE: worker
+    command: ["php", "artisan", "queue:work", "database", "--queue=maintenance", "--sleep=10", "--tries=1", "--timeout=1800", "--max-time=3600"]
+    mem_limit: 300m
+    depends_on:
+      app:
+        condition: service_healthy
+
+  scheduler:
+    <<: *laravel
+    environment:
+      ERP_ROLE: worker
+    command: ["php", "artisan", "schedule:work"]
+    mem_limit: 128m
+    depends_on:
+      app:
+        condition: service_healthy
+
+  web:
+    image: daftar-web
+    pull_policy: never
+    restart: unless-stopped
+    logging: *logging
+    volumes:
+      - erp-storage:/var/www/html/storage:ro
+    mem_limit: 64m
+    depends_on:
+      app:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "${ERP_HTTP_PORT:-80}:80"
+      - "${ERP_HTTPS_PORT:-443}:443"
+      - "${ERP_HTTPS_PORT:-443}:443/udp"
+    environment:
+      ERP_DOMAIN: ${ERP_DOMAIN:?Set ERP_DOMAIN in .env}
+      ERP_ACME_EMAIL: ${ERP_ACME_EMAIL:?Set ERP_ACME_EMAIL in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    mem_limit: 96m
+    depends_on:
+      - web
+
+  # Only with --profile localdb. Trimmed for a 1 GB machine.
+  db:
+    profiles: ["localdb"]
+    image: mysql:8.4
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-}
+      TZ: ${APP_TIMEZONE:-Asia/Hebron}
+    command:
+      - mysqld
+      - --log-bin-trust-function-creators=1
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --performance-schema=OFF
+      - --innodb-buffer-pool-size=128M
+      - --max-connections=40
+    volumes:
+      - erp-mysql:/var/lib/mysql
+    mem_limit: 450m
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+volumes:
+  erp-storage:
+  erp-mysql:
+  caddy-data:
+  caddy-config:

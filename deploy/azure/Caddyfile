@@ -1,0 +1,12 @@
+# HTTPS in front of Nginx. Caddy obtains and renews the Let's Encrypt certificate by itself;
+# ERP_DOMAIN must point at the VM (e.g. daftar-store.uaenorth.cloudapp.azure.com) and ports
+# 80/443 must be open in the VM's network security group.
+{
+	email {$ERP_ACME_EMAIL}
+}
+
+{$ERP_DOMAIN} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy web:80
+}

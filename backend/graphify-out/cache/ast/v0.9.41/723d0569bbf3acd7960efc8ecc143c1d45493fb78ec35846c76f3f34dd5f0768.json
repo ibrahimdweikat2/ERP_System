@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_app_domains_accounting_enums_journalstatus_php", "label": "JournalStatus.php", "file_type": "code", "source_file": "app/Domains/Accounting/Enums/JournalStatus.php", "source_location": "L1"}], "edges": [], "raw_calls": []}
