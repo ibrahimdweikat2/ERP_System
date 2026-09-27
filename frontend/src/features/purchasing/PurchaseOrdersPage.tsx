@@ -1,4 +1,5 @@
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
+import { DeleteDraftButton } from "../../components/ui/DeleteAction";
 import { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -257,6 +258,14 @@ function OrderDetail({ id }: { id: number }) {
               إرسال للموافقة
             </button>
           )}
+          {can("purchasing.create") &&
+            (d.status === "draft" || d.status === "rejected") && (
+              <DeleteDraftButton
+                endpoint={`purchase-orders/${d.id}`}
+                name={`أمر الشراء #${d.id}`}
+                backTo="/purchasing/orders"
+              />
+            )}
           {can("purchasing.approve") && d.status === "pending" && (
             <>
               <button

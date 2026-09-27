@@ -96,11 +96,13 @@ class StockDocumentController extends Controller
         return new StockDocumentResource($class::with(['lines.product', 'location', 'approval'])->findOrFail($result['id']));
     }
 
-    public function destroy(Request $r): never
+    /** Drafts are deleted; posted or submitted documents are retained (see DeleteDraftDocument). */
+    public function destroy(Request $r): JsonResponse
     {
         $doc = $this->document($r);
         $this->allowWrite($r,$doc);
-        app(RecordAudit::class)->execute('inventory.deletion_rejected',$this->type($r)->value,$doc->id);
-        throw new BusinessException('STOCK_DOCUMENT_DELETE_FORBIDDEN','مستندات المخزون محفوظة للتدقيق ولا تُحذف.');
+        app(\App\Domains\Documents\Actions\DeleteDraftDocument::class)->execute($this->type($r)->value, $doc->id, $r->user()->id);
+
+        return response()->json(['message' => 'تم حذف المسودة.']);
     }
 }

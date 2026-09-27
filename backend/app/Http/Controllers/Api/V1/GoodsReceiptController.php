@@ -62,10 +62,4 @@ class GoodsReceiptController extends Controller
     {
         return response()->json(['data' => StockLocation::where('active', true)->orderBy('code')->get()]);
     }
-
-    public function destroy(GoodsReceipt $goodsReceipt): never
-    {
-        app(RecordAudit::class)->execute('purchasing.receipt_deletion_rejected', 'goods_receipt', $goodsReceipt->id);
-        throw new BusinessException('RECEIPT_DELETE_FORBIDDEN', 'سندات الاستلام محفوظة للتدقيق ولا تُحذف.');
-    }
 }

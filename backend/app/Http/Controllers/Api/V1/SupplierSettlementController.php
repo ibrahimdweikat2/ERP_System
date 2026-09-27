@@ -7,9 +7,7 @@ use App\Domains\Purchasing\Models\Supplier;
 use App\Domains\Purchasing\Models\SupplierInvoice;
 use App\Domains\Purchasing\Models\SupplierPayment;
 use App\Domains\Purchasing\Models\SupplierCreditNote;
-use App\Domains\Audit\Actions\RecordAudit;
 use App\Http\Controllers\Controller;
-use App\Support\BusinessException;
 use App\Support\Decimal;
 use App\Support\IdempotentRequest;
 use Illuminate\Http\Request;
@@ -40,12 +38,6 @@ class SupplierSettlementController extends Controller
         $kind=$r->route('settlementKind');
         $result=$idem->execute($r->user()->id,'supplier.'.$kind.'.post.'.$id,(string)$r->header('Idempotency-Key'),[],fn()=>['id'=>app($kind==='payments'?PaySupplier::class:ReturnPurchase::class)->post($id,$r->user()->id)->id]);
         return $this->show($r,$result['id']);
-    }
-    public function destroy(Request $r,int $id): never
-    {
-        $this->model($r)::findOrFail($id);
-        app(RecordAudit::class)->execute('purchasing.settlement_delete_rejected','supplier_'.$r->route('settlementKind'),$id);
-        throw new BusinessException('POSTED_DOCUMENT_RETAINED','مستندات الدفعات والمرتجعات محفوظة ولا تُحذف.');
     }
     public function openInvoices(Request $r): JsonResponse
     {

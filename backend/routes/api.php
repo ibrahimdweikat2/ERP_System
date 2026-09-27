@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CatalogMasterController;
+use App\Http\Controllers\Api\V1\DraftDocumentController;
 use App\Http\Controllers\Api\V1\FoundationController;
 use App\Http\Controllers\Api\V1\GoodsReceiptController;
 use App\Http\Controllers\Api\V1\InventoryController;
@@ -39,7 +40,7 @@ Route::prefix('v1')->middleware('web')->group(function () {
         Route::get('supplier-invoices/{supplierInvoice}', [SupplierInvoiceController::class, 'show'])->middleware('permission:purchasing.view');
         Route::post('supplier-invoices', [SupplierInvoiceController::class, 'store'])->middleware('permission:purchasing.invoice');
         Route::put('supplier-invoices/{supplierInvoice}', [SupplierInvoiceController::class, 'update'])->middleware('permission:purchasing.invoice');
-        Route::delete('supplier-invoices/{supplierInvoice}', [SupplierInvoiceController::class, 'destroy'])->middleware('permission:purchasing.invoice');
+        Route::delete('supplier-invoices/{supplierInvoice}', [DraftDocumentController::class, 'destroy'])->defaults('draftKind', 'supplier_invoice')->middleware('permission:purchasing.invoice');
         Route::post('supplier-invoices/{supplierInvoice}/post', [SupplierInvoiceController::class, 'post'])->middleware('permission:purchasing.invoice');
         Route::get('supplier-invoices/{supplierInvoice}/attachments', [InvoiceAttachmentController::class, 'index'])->middleware('permission:purchasing.view');
         Route::post('supplier-invoices/{supplierInvoice}/attachments', [InvoiceAttachmentController::class, 'store'])->middleware('permission:purchasing.invoice');
@@ -52,14 +53,14 @@ Route::prefix('v1')->middleware('web')->group(function () {
         Route::get('goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'show'])->middleware('permission:purchasing.view');
         Route::post('goods-receipts', [GoodsReceiptController::class, 'store'])->middleware('permission:purchasing.receive');
         Route::put('goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'update'])->middleware('permission:purchasing.receive');
-        Route::delete('goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'destroy'])->middleware('permission:purchasing.receive');
+        Route::delete('goods-receipts/{goodsReceipt}', [DraftDocumentController::class, 'destroy'])->defaults('draftKind', 'goods_receipt')->middleware('permission:purchasing.receive');
         Route::post('goods-receipts/{goodsReceipt}/post', [GoodsReceiptController::class, 'post'])->middleware('permission:purchasing.receive');
         Route::get('purchasing/receiving-locations', [GoodsReceiptController::class, 'locations'])->middleware('permission:purchasing.view,purchasing.receive');
         Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->middleware('permission:purchasing.view');
         Route::get('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->middleware('permission:purchasing.view');
         Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->middleware('permission:purchasing.create');
         Route::put('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update'])->middleware('permission:purchasing.create');
-        Route::delete('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy'])->middleware('permission:purchasing.create');
+        Route::delete('purchase-orders/{purchaseOrder}', [DraftDocumentController::class, 'destroy'])->defaults('draftKind', 'purchase_order')->middleware('permission:purchasing.create');
         foreach (['submit', 'issue', 'decide'] as $event) {
             Route::post('purchase-orders/{purchaseOrder}/'.$event, [PurchaseOrderController::class, 'transition'])->defaults('event', $event)->middleware('permission:'.($event === 'decide' ? 'purchasing.approve' : 'purchasing.create'));
         }
@@ -107,6 +108,7 @@ Route::prefix('v1')->middleware('web')->group(function () {
             Route::get($catalogMaster, [CatalogMasterController::class, 'index'])->defaults('master', $catalogMaster)->middleware('permission:catalog.view,catalog.manage,inventory.view');
             Route::post($catalogMaster, [CatalogMasterController::class, 'store'])->defaults('master', $catalogMaster)->middleware('permission:catalog.manage');
             Route::put($catalogMaster.'/{id}', [CatalogMasterController::class, 'update'])->defaults('master', $catalogMaster)->middleware('permission:catalog.manage');
+            Route::delete($catalogMaster.'/{id}', [CatalogMasterController::class, 'destroy'])->defaults('master', $catalogMaster)->middleware('permission:catalog.manage');
         }
         Route::get('account-mappings', [AccountMappingController::class, 'index'])->middleware('permission:accounting.view,settings.manage');
         Route::put('account-mappings/{key}', [AccountMappingController::class, 'update'])->middleware('permission:settings.manage');
@@ -114,7 +116,7 @@ Route::prefix('v1')->middleware('web')->group(function () {
         Route::get('journal-entries/{journalEntry}', [JournalController::class, 'show'])->middleware('permission:accounting.view');
         Route::post('journal-entries', [JournalController::class, 'store'])->middleware('permission:accounting.journal_create');
         Route::put('journal-entries/{journalEntry}', [JournalController::class, 'update'])->middleware('permission:accounting.journal_create');
-        Route::delete('journal-entries/{journalEntry}', [JournalController::class, 'destroy'])->middleware('permission:accounting.journal_create');
+        Route::delete('journal-entries/{journalEntry}', [DraftDocumentController::class, 'destroy'])->defaults('draftKind', 'journal_entry')->middleware('permission:accounting.journal_create');
         Route::post('journal-entries/{journalEntry}/post', [JournalController::class, 'post'])->middleware('permission:accounting.post');
         Route::post('journal-entries/{journalEntry}/reverse', [JournalController::class, 'reverse'])->middleware('permission:accounting.reverse');
         Route::post('accounting-periods/{period}/lock', [JournalController::class, 'periodState'])->middleware('permission:accounting.period_lock');
@@ -126,6 +128,7 @@ Route::prefix('v1')->middleware('web')->group(function () {
             Route::get($master, [AccountingSetupController::class, 'index'])->defaults('master', $master)->middleware('permission:accounting.view');
             Route::post($master, [AccountingSetupController::class, 'store'])->defaults('master', $master)->middleware('permission:settings.manage');
             Route::put($master.'/{id}', [AccountingSetupController::class, 'update'])->defaults('master', $master)->middleware('permission:settings.manage');
+            Route::delete($master.'/{id}', [AccountingSetupController::class, 'destroy'])->defaults('master', $master)->middleware('permission:settings.manage');
         }
         Route::get('fiscal-years', [AccountingSetupController::class, 'fiscalYears'])->middleware('permission:accounting.view');
         Route::post('fiscal-years', [AccountingSetupController::class, 'createYear'])->middleware('permission:settings.manage');

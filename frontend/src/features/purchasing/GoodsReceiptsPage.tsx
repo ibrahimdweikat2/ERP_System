@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DeleteDraftButton } from "../../components/ui/DeleteAction";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { api, type ApiEnvelope, type Page } from "../../lib/api/client";
@@ -244,6 +245,11 @@ function ReceiptDetail({ id }: { id: number }) {
               <button className="button" onClick={() => setEditing(true)}>
                 تعديل الاستلام
               </button>
+              <DeleteDraftButton
+                endpoint={`goods-receipts/${d.id}`}
+                name={`مسودة الاستلام #${d.id}`}
+                backTo="/purchasing/receipts"
+              />
               <button
                 className="button primary"
                 disabled={post.isPending}
