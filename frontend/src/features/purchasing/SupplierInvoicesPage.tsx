@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DeleteDraftButton } from "../../components/ui/DeleteAction";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import Decimal from "decimal.js";
@@ -243,6 +244,11 @@ function InvoiceDetail({ id }: { id: number }) {
               <button className="button" onClick={() => setEditing(true)}>
                 تعديل فاتورة المورد
               </button>
+              <DeleteDraftButton
+                endpoint={`supplier-invoices/${d.id}`}
+                name={`مسودة فاتورة المورد #${d.id}`}
+                backTo="/purchasing/invoices"
+              />
               <button
                 className="button primary"
                 disabled={post.isPending}

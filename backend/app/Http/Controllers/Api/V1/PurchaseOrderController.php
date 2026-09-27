@@ -80,12 +80,6 @@ class PurchaseOrderController extends Controller
         return response()->json(['data' => DB::table('approval_policies')->where('key', 'purchase_order')->first()]);
     }
 
-    public function destroy(PurchaseOrder $purchaseOrder): never
-    {
-        app(RecordAudit::class)->execute('purchasing.order_deletion_rejected', 'purchase_order', $purchaseOrder->id);
-        throw new BusinessException('PURCHASE_ORDER_DELETE_FORBIDDEN', 'أوامر الشراء محفوظة للتدقيق ولا تُحذف.');
-    }
-
     public function savePolicy(Request $r): JsonResponse
     {
         $d = $r->validate(['threshold' => ['required', 'string', Decimal::MONEY_RULE], 'segregate_requester' => ['required', 'boolean'], 'reason' => ['required', 'string', 'min:5', 'max:1000']]);

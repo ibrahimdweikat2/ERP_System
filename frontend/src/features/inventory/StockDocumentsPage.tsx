@@ -1,4 +1,5 @@
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
+import { DeleteDraftButton } from "../../components/ui/DeleteAction";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -412,6 +413,13 @@ function StockDetail({ kind, id }: { kind: StockKind; id: number }) {
             >
               {count ? "تسجيل / تعديل العدّ" : "تعديل المسودة"}
             </button>
+          )}
+          {write && (d.status === "draft" || d.status === "rejected") && (
+            <DeleteDraftButton
+              endpoint={`${kind}/${d.id}`}
+              name={`مسودة ${stockTitles[kind]} #${d.id}`}
+              backTo={`/inventory/documents/${kind}`}
+            />
           )}
           {write && d.status === "draft" && kind !== "stock-transfers" && (
             <button

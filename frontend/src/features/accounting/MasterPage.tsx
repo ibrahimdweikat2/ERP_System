@@ -3,7 +3,11 @@ import { useState } from "react";
 import type { PermissionName } from "../../types/identity";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
+import {
+  DeleteDialog,
+  DeleteIconButton,
+} from "../../components/ui/DeleteAction";
 import { useAuth } from "../../lib/auth/context";
 import { api, allPages, type Page } from "../../lib/api/client";
 import {
@@ -41,6 +45,7 @@ export function MasterPage({
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<MasterRow | null | undefined>();
+  const [deleting, setDeleting] = useState<MasterRow>();
   const client = useQueryClient();
   const { can } = useAuth();
   const q = useQuery({
@@ -108,9 +113,24 @@ export function MasterPage({
                 label: "الإجراءات",
                 render: (r: MasterRow) =>
                   can(writePermission) && !def.readonly ? (
-                    <button className="text-link" onClick={() => setEditing(r)}>
-                      تعديل
-                    </button>
+                    <span className="row-actions">
+                      <button
+                        type="button"
+                        className="icon-button"
+                        title="تعديل"
+                        aria-label={`تعديل ${rowName(r)}`}
+                        onClick={() => setEditing(r)}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      {/* Exchange rates are an immutable audit record; they are never deleted. */}
+                      {kind !== "exchange-rates" && (
+                        <DeleteIconButton
+                          label={rowName(r)}
+                          onClick={() => setDeleting(r)}
+                        />
+                      )}
+                    </span>
                   ) : null,
               },
             ]}
@@ -123,6 +143,15 @@ export function MasterPage({
           onPage={setPage}
         />
       </section>
+      {deleting && (
+        <DeleteDialog
+          title={`حذف من ${def.title}`}
+          name={rowName(deleting)}
+          note="يُحذف السجل فقط إن لم يكن مستخدماً؛ السجل المستخدم يمكن إيقافه بدلاً من حذفه."
+          endpoint={`${kind}/${encodeURIComponent(String(deleting.id))}`}
+          onClose={() => setDeleting(undefined)}
+        />
+      )}
       {editing !== undefined && (
         <MasterEditor
           key={kind + String(editing?.id ?? "new")}
@@ -138,6 +167,9 @@ export function MasterPage({
       )}
     </>
   );
+}
+function rowName(r: MasterRow): string {
+  return String(r.name_ar ?? r.name ?? r.code ?? r.id ?? "");
 }
 function MasterEditor({
   kind,

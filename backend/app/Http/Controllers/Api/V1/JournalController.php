@@ -7,7 +7,6 @@ use App\Domains\Accounting\Actions\PostJournal;
 use App\Domains\Accounting\Actions\ReverseJournal;
 use App\Domains\Accounting\Actions\SaveManualJournal;
 use App\Domains\Accounting\Models\JournalEntry;
-use App\Domains\Audit\Actions\RecordAudit;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SaveJournalRequest;
 use App\Http\Resources\JournalEntryResource;
@@ -72,12 +71,6 @@ class JournalController extends Controller
         $result = $idem->execute($r->user()->id, 'journal.reverse.'.$journalEntry->id, (string) $r->header('Idempotency-Key'), $data, fn () => ['id' => $action->execute($journalEntry->id, $data['date'], $data['reason'], $r->user()->id)->id]);
 
         return new JournalEntryResource(JournalEntry::with(['lines.account', 'journal', 'reversal'])->findOrFail($result['id']));
-    }
-
-    public function destroy(Request $r, JournalEntry $journalEntry, RecordAudit $audit): never
-    {
-        $audit->execute('accounting.deletion_rejected', 'journal_entry', $journalEntry->id, after: ['status' => $journalEntry->status]);
-        throw new BusinessException('JOURNAL_DELETE_FORBIDDEN', 'لا يمكن حذف القيود. استخدم العكس للقيود المرحّلة.');
     }
 
     public function periodState(Request $r, int $period, ChangePeriodState $action): JsonResponse

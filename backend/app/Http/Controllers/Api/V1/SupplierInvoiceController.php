@@ -63,12 +63,6 @@ class SupplierInvoiceController extends Controller
         return new SupplierInvoiceResource(SupplierInvoice::with('lines')->findOrFail($result['id']));
     }
 
-    public function destroy(SupplierInvoice $supplierInvoice): never
-    {
-        app(RecordAudit::class)->execute('purchasing.invoice_deletion_rejected', 'supplier_invoice', $supplierInvoice->id);
-        throw new BusinessException('INVOICE_DELETE_FORBIDDEN', 'فواتير الموردين محفوظة للتدقيق ولا تُحذف.');
-    }
-
     public function receipts(Request $r): AnonymousResourceCollection
     {
         $d = $r->validate(['supplier_id' => ['required', 'integer', 'exists:suppliers,id'], 'currency' => ['required', 'string', 'size:3'], 'per_page' => ['nullable', 'integer', 'between:1,100']]);

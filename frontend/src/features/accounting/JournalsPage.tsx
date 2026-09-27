@@ -1,4 +1,5 @@
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
+import { DeleteDialog } from "../../components/ui/DeleteAction";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Decimal from "decimal.js";
@@ -458,6 +459,7 @@ function EntryDetail({
   const e = q.data?.data;
   const { can } = useAuth();
   const [reverse, setReverse] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [date, setDate] = useState(new Date().toLocaleDateString("en-CA"));
   const post = useMutation({
     mutationFn: () =>
@@ -548,6 +550,17 @@ function EntryDetail({
                 )}
               {e.status === "draft" &&
                 e.reference_type === "manual" &&
+                can("accounting.journal_create") && (
+                  <button
+                    className="button danger-outline"
+                    onClick={() => setDeleting(true)}
+                  >
+                    <Trash2 size={16} />
+                    حذف المسودة
+                  </button>
+                )}
+              {e.status === "draft" &&
+                e.reference_type === "manual" &&
                 can("accounting.post") && (
                   <button
                     className="button primary"
@@ -568,6 +581,16 @@ function EntryDetail({
             </footer>
           </div>
         )
+      )}
+      {deleting && (
+        <DeleteDialog
+          title="حذف مسودة القيد"
+          name={`مسودة القيد #${id}`}
+          note="تُحذف المسودات فقط؛ القيد المرحّل يُصحَّح بالعكس."
+          endpoint={`journal-entries/${id}`}
+          onClose={() => setDeleting(false)}
+          onDeleted={onClose}
+        />
       )}
       {reverse && (
         <ApprovalDialog

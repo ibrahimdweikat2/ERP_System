@@ -40,6 +40,14 @@ class CatalogMasterController extends Controller
         return $this->save($r, $r->route('id'));
     }
 
+    public function destroy(Request $r, \App\Domains\StoreSetup\Actions\DeleteMasterRecord $action): JsonResponse
+    {
+        $kind = $r->route('master');
+        $action->execute($kind, self::MODELS[$kind], $r->route('id'), $r->user()->id);
+
+        return response()->json(['message' => 'تم الحذف.']);
+    }
+
     private function save(Request $r, ?string $id = null): JsonResponse
     {
         $kind = $r->route('master');

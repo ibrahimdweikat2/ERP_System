@@ -56,6 +56,14 @@ class AccountingSetupController extends Controller
         return response()->json(['data' => $action->execute($r->route('master'), $r->validated(), $r->route('id'))]);
     }
 
+    public function destroy(Request $r, \App\Domains\StoreSetup\Actions\DeleteMasterRecord $action): JsonResponse
+    {
+        $kind = $r->route('master');
+        $action->execute($kind, SaveAccountingMaster::MODELS[$kind], $r->route('id'), $r->user()->id);
+
+        return response()->json(['message' => 'تم الحذف.']);
+    }
+
     public function fiscalYears(): JsonResponse
     {
         return response()->json(FiscalYear::with('periods')->orderByDesc('starts_on')->paginate(\App\Support\PerPage::resolve(20)));

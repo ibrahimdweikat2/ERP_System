@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\SupplierSettlementController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\SalesController;
+use App\Http\Controllers\Api\V1\DraftDocumentController;
 use App\Http\Controllers\Api\V1\CustomerPaymentController;
 use App\Http\Controllers\Api\V1\InstallmentController;
 use App\Http\Controllers\Api\V1\CheckController;
@@ -21,6 +22,7 @@ Route::get('customer-settlements',[\App\Http\Controllers\Api\V1\CustomerSettleme
 Route::post('customer-settlements',[\App\Http\Controllers\Api\V1\CustomerSettlementController::class,'store']);
 Route::get('customer-settlements/{id}',[\App\Http\Controllers\Api\V1\CustomerSettlementController::class,'show'])->middleware('permission:sales.view');
 Route::post('customer-settlements/{id}/post',[\App\Http\Controllers\Api\V1\CustomerSettlementController::class,'post']);
+Route::delete('customer-settlements/{id}',[DraftDocumentController::class,'destroy'])->defaults('draftKind','customer_settlement')->middleware('permission:payments.receive');
 Route::get('warranty-claims',[\App\Http\Controllers\Api\V1\WarrantyController::class,'index'])->middleware('permission:inventory.view');
 Route::post('warranty-claims',[\App\Http\Controllers\Api\V1\WarrantyController::class,'store'])->middleware('permission:inventory.transfer');
 Route::get('warranty-claims/{id}',[\App\Http\Controllers\Api\V1\WarrantyController::class,'show'])->middleware('permission:inventory.view');
@@ -46,15 +48,17 @@ Route::post('sales-invoices',[SalesController::class,'save'])->middleware('permi
 Route::put('sales-invoices/{salesInvoice}',[SalesController::class,'save'])->middleware('permission:sales.create');
 Route::post('sales-invoices/{salesInvoice}/submit',[SalesController::class,'submit'])->middleware('permission:sales.create');
 Route::post('sales-invoices/{salesInvoice}/post',[SalesController::class,'post'])->middleware('permission:sales.post');
-Route::delete('sales-invoices/{salesInvoice}',[SalesController::class,'destroy'])->middleware('permission:sales.cancel');
+Route::delete('sales-invoices/{salesInvoice}',[DraftDocumentController::class,'destroy'])->defaults('draftKind','sales_invoice')->middleware('permission:sales.cancel');
 Route::get('sales-returns',[SalesController::class,'returns'])->middleware('permission:sales.view');
 Route::post('sales-returns',[SalesController::class,'returns'])->middleware('permission:sales.cancel');
 Route::get('sales-returns/{id}',[SalesController::class,'returnDetail'])->middleware('permission:sales.view');
 Route::post('sales-returns/{id}/post',[SalesController::class,'postReturn'])->middleware('permission:sales.cancel');
+Route::delete('sales-returns/{id}',[DraftDocumentController::class,'destroy'])->defaults('draftKind','sales_return')->middleware('permission:sales.cancel');
 Route::get('customer-payments',[CustomerPaymentController::class,'index'])->middleware('permission:payments.view');
 Route::get('customer-payments/{customerPayment}',[CustomerPaymentController::class,'show'])->middleware('permission:payments.view');
 Route::post('customer-payments',[CustomerPaymentController::class,'store'])->middleware('permission:payments.receive');
 Route::post('customer-payments/{customerPayment}/post',[CustomerPaymentController::class,'post'])->middleware('permission:payments.receive');
+Route::delete('customer-payments/{customerPayment}',[DraftDocumentController::class,'destroy'])->defaults('draftKind','customer_payment')->middleware('permission:payments.receive');
 Route::get('installment-contracts',[InstallmentController::class,'index'])->middleware('permission:installments.view');
 Route::post('installment-contracts/preview-schedule',[InstallmentController::class,'preview'])->middleware('permission:installments.create,sales.create');
 Route::get('installment-contracts/{id}',[InstallmentController::class,'show'])->middleware('permission:installments.view');
@@ -82,6 +86,7 @@ foreach(['expenses'=>['expenses.view','expenses.create'],'cash_transfers'=>['cas
     Route::post($path,[TreasuryController::class,'documents'])->defaults('treasuryKind',$kind)->middleware('permission:'.$write);
     Route::get($path.'/{id}',[TreasuryController::class,'document'])->defaults('treasuryKind',$kind)->middleware('permission:'.$read);
     Route::post($path.'/{id}/post',[TreasuryController::class,'post'])->defaults('treasuryKind',$kind)->middleware('permission:'.$write);
+    Route::delete($path.'/{id}',[DraftDocumentController::class,'destroy'])->defaults('treasuryKind',$kind)->defaults('draftKind',$kind==='expenses'?'expense':'cash_transfer')->middleware('permission:'.$write);
 }
 Route::get('cashier-sessions',[TreasuryController::class,'sessions'])->middleware('permission:cashbank.view,sales.post,payments.receive');
 Route::post('cashier-sessions',[TreasuryController::class,'sessions'])->middleware('permission:cashbank.manage,sales.post,payments.receive');
@@ -111,5 +116,5 @@ foreach (['payments'=>'pay','credit-notes'=>'invoice'] as $kind=>$permission) {
     Route::get('supplier-'.$kind.'/{id}',[SupplierSettlementController::class,'show'])->defaults('settlementKind',$kind)->middleware('permission:purchasing.view');
     Route::post('supplier-'.$kind,[SupplierSettlementController::class,'store'])->defaults('settlementKind',$kind)->middleware('permission:purchasing.'.$permission);
     Route::post('supplier-'.$kind.'/{id}/post',[SupplierSettlementController::class,'post'])->defaults('settlementKind',$kind)->middleware('permission:purchasing.'.$permission);
-    Route::delete('supplier-'.$kind.'/{id}',[SupplierSettlementController::class,'destroy'])->defaults('settlementKind',$kind)->middleware('permission:purchasing.'.$permission);
+    Route::delete('supplier-'.$kind.'/{id}',[DraftDocumentController::class,'destroy'])->defaults('settlementKind',$kind)->defaults('draftKind',$kind==='payments'?'supplier_payment':'supplier_credit_note')->middleware('permission:purchasing.'.$permission);
 }
