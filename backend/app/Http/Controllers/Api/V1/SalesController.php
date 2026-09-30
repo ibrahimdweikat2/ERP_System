@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers\Api\V1;
+use Illuminate\Support\Facades\DB;
 use App\Domains\Sales\Models\SalesInvoice;
 use App\Domains\Sales\Models\SalesReturn;
 use App\Domains\Sales\Actions\SaveSalesInvoice;
@@ -25,7 +26,12 @@ class SalesController extends Controller {
         $d=$r->validate(['search'=>['nullable','string','max:120'],'status'=>['nullable',Rule::in(['draft','posted'])],'sale_mode'=>['nullable',Rule::in(['cash','credit','installment'])],'per_page'=>['nullable','integer','between:1,100']]);
         $p=SalesInvoice::query()->when($d['search']??null,fn($q,$s)=>$q->where(fn($q)=>$q->where('document_no','like',"%$s%")->orWhere('customer_snapshot->name','like',"%$s%")))->when($d['status']??null,fn($q,$s)=>$q->where('status',$s))->when($d['sale_mode']??null,fn($q,$s)=>$q->where('sale_mode',$s))->orderByDesc('id')->paginate(\App\Support\PerPage::resolve(25));$p->through(fn($doc)=>$this->present($doc,$r));return response()->json($p);
     }
-    public function show(Request $r,SalesInvoice $salesInvoice):JsonResponse{return response()->json(['data'=>$this->present($salesInvoice->load('lines'),$r)]);}
+    public function show(Request $r,SalesInvoice $salesInvoice):JsonResponse{
+        $salesInvoice->load('lines');
+        // Lines saved before the policy name was snapshotted: show the product's current policy name (read-only; posted lines are immutable).
+        $missing=$salesInvoice->lines->filter(fn($l)=>is_array($l->warranty_snapshot)&&empty($l->warranty_snapshot['name_ar']));
+        if($missing->isNotEmpty()){$names=DB::table('products')->join('warranty_policies','warranty_policies.id','=','products.warranty_policy_id')->whereIn('products.id',$missing->pluck('product_id'))->pluck('warranty_policies.name_ar','products.id');foreach($missing as $l)if(isset($names[$l->product_id]))$l->warranty_snapshot=[...$l->warranty_snapshot,'name_ar'=>$names[$l->product_id]];}
+        return response()->json(['data'=>$this->present($salesInvoice,$r)]);}
     public function save(Request $r,IdempotentRequest $idem,?SalesInvoice $salesInvoice=null):JsonResponse {
         $rules=['version'=>[$salesInvoice?'required':'prohibited','integer','min:1'],'customer_id'=>['required','integer','exists:customers,id'],'document_date'=>OperationRules::date(),'due_date'=>['required','date_format:Y-m-d','after_or_equal:document_date'],'currency'=>['required','string','size:3'],'sale_mode'=>['required',Rule::in(['cash','credit','installment'])],'checkout'=>['required','array:amount,method,cashbox_id,bank_account_id,installment_count,first_due_date,frequency,schedule,terms'],'checkout.amount'=>OperationRules::money(),'checkout.method'=>['required',Rule::in(['cash','bank'])],'checkout.cashbox_id'=>['nullable','integer','exists:cashboxes,id'],'checkout.bank_account_id'=>['nullable','integer','exists:bank_accounts,id'],'checkout.terms'=>['nullable','string','max:5000'],'notes'=>['nullable','string','max:3000'],'delivery_address'=>['nullable','string','max:1000'],'delivery_date'=>['nullable','date_format:Y-m-d'],'lines'=>['required','array','min:1','max:100'],'lines.*'=>['array:product_id,location_id,quantity,unit_price,discount_amount,tax_code_id,tax_inclusive,serials'],'lines.*.product_id'=>['required','integer','exists:products,id'],'lines.*.location_id'=>['required','integer','exists:stock_locations,id'],'lines.*.quantity'=>OperationRules::money(),'lines.*.unit_price'=>OperationRules::money(),'lines.*.discount_amount'=>OperationRules::money(),'lines.*.tax_code_id'=>['required','integer','exists:tax_codes,id'],'lines.*.tax_inclusive'=>['required','boolean'],'lines.*.serials'=>['present','array','max:1000'],'lines.*.serials.*'=>['string','max:120']];
         foreach(OperationRules::schedule() as $k=>$v)$rules['checkout.'.$k]=$v;$d=$r->validate($rules);
