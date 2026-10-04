@@ -42,7 +42,7 @@ class StoreBrandingTest extends TestCase
     {
         $this->actingAs($this->owner());
         $first = $this->post('/api/v1/store/logo', ['file' => UploadedFile::fake()->image('a.png', 64, 64)], ['Accept' => 'application/json'])->assertCreated()->json('data.logo_url');
-        $firstPath = StoreSetting::findOrFail(1)->logo_path;
+        $firstPath = StoreSetting::current()->logo_path;
         Storage::disk('public')->assertExists($firstPath);
         $this->getJson('/api/v1/store/context')->assertJsonPath('data.logo_url', $first);
 
@@ -50,7 +50,7 @@ class StoreBrandingTest extends TestCase
         Storage::disk('public')->assertMissing($firstPath);
 
         $this->deleteJson('/api/v1/store/logo')->assertOk();
-        $this->assertNull(StoreSetting::findOrFail(1)->logo_path);
+        $this->assertNull(StoreSetting::current()->logo_path);
         $this->assertSame([], Storage::disk('public')->allFiles('branding'));
     }
 
@@ -60,14 +60,15 @@ class StoreBrandingTest extends TestCase
         $this->post('/api/v1/store/logo', ['file' => UploadedFile::fake()->create('x.pdf', 10, 'application/pdf')], ['Accept' => 'application/json'])->assertStatus(422);
     }
 
-    public function test_public_branding_exposes_only_name_and_logo(): void
+    // Before sign-in no company is known: the page shows the platform, never a company's branding.
+    public function test_public_branding_exposes_only_the_platform_name(): void
     {
         $this->actingAs($this->owner());
         $this->post('/api/v1/store/logo', ['file' => UploadedFile::fake()->image('a.png', 64, 64)], ['Accept' => 'application/json'])->assertCreated();
-        StoreSetting::whereKey(1)->update(['platform_name' => 'متجري', 'phone' => '0599000000']);
+        StoreSetting::query()->update(['platform_name' => 'متجري', 'phone' => '0599000000']);
         auth()->guard('web')->logout();
-        $data = $this->getJson('/api/v1/store/branding')->assertOk()->assertJsonPath('data.platform_name', 'متجري')->json('data');
+        $data = $this->getJson('/api/v1/store/branding')->assertOk()->assertJsonPath('data.platform_name', config('erp.platform_name'))->json('data');
         $this->assertSame(['platform_name', 'logo_url'], array_keys($data));
-        $this->assertNotNull($data['logo_url']);
+        $this->assertNull($data['logo_url']);
     }
 }

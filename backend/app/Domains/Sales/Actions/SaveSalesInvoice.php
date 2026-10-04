@@ -22,7 +22,7 @@ class SaveSalesInvoice
     public function execute(array $data,int $actor,?int $id=null): SalesInvoice
     {
         return DB::transaction(function()use($data,$actor,$id){
-            $store=StoreSetting::sharedLock()->findOrFail(1); $policy=app(BusinessApproval::class)->policy('sales');
+            $store=StoreSetting::sharedCurrent(); $policy=app(BusinessApproval::class)->policy('sales');
             $user=User::findOrFail($actor); $doc=$id?SalesInvoice::lockForUpdate()->findOrFail($id):new SalesInvoice;
             if($id && ($doc->status==='posted' || $doc->version!==(int)$data['version']))throw new BusinessException('INVOICE_NOT_EDITABLE','الفاتورة مرحّلة أو تغيرت نسختها.',409);
             $customer=Customer::lockForUpdate()->findOrFail($data['customer_id']);

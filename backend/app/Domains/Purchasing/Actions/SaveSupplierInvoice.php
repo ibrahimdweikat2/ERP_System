@@ -21,8 +21,8 @@ class SaveSupplierInvoice
     public function execute(array $data, int $actorId, ?int $id = null): SupplierInvoice
     {
         return DB::transaction(function () use ($data, $actorId, $id) {
-            $store = StoreSetting::sharedLock()->findOrFail(1);
-            $policy = PurchasingInvoicePolicy::sharedLock()->findOrFail(1);
+            $store = StoreSetting::sharedCurrent();
+            $policy = PurchasingInvoicePolicy::sharedCurrent();
             $doc = $id ? SupplierInvoice::with('lines')->lockForUpdate()->findOrFail($id) : new SupplierInvoice;
             if ($id && ($doc->status !== 'draft' || $doc->version !== (int) $data['version'])) {
                 throw new BusinessException('INVOICE_NOT_EDITABLE', 'الفاتورة مرحّلة أو تغيرت نسختها.', 409);

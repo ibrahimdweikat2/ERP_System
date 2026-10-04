@@ -38,6 +38,8 @@ final class RecordUsage
         $row = (array) $row;
         $keys = DB::table('information_schema.key_column_usage')
             ->where('table_schema', DB::raw('database()'))->where('referenced_table_name', $table)
+            // Composite keys (company_id, code) repeat the company column; the row's company says nothing about usage.
+            ->where('column_name', '!=', 'company_id')
             ->get(['table_name', 'column_name', 'referenced_column_name']);
         $used = [];
         foreach ($keys as $key) {

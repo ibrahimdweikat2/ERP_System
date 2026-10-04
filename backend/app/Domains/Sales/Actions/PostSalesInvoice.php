@@ -24,7 +24,7 @@ class PostSalesInvoice
     public function execute(int $id,int $actor): SalesInvoice
     {
         return DB::transaction(function()use($id,$actor){
-            $store=StoreSetting::sharedLock()->findOrFail(1); $doc=SalesInvoice::with('lines')->lockForUpdate()->findOrFail($id);
+            $store=StoreSetting::sharedCurrent(); $doc=SalesInvoice::with('lines')->lockForUpdate()->findOrFail($id);
             if($doc->status==='posted')return $doc;
             Posting::period($doc->document_date); $customer=Customer::lockForUpdate()->findOrFail($doc->customer_id);
             if(!$customer->active)throw new BusinessException('CUSTOMER_INACTIVE','العميل غير نشط.');

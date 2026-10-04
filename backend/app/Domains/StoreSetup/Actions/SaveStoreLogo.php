@@ -28,10 +28,10 @@ class SaveStoreLogo
         Storage::disk('public')->putFileAs(dirname($path), $file, basename($path));
         try {
             [$store, $previous] = DB::transaction(function () use ($path, $actorId) {
-                $store = StoreSetting::lockForUpdate()->findOrFail(1);
+                $store = StoreSetting::lockCurrent();
                 $previous = $store->logo_path;
                 $store->forceFill(['logo_path' => $path])->save();
-                app(RecordAudit::class)->execute('store.logo_saved', 'store_setting', 1, ['logo_path' => $previous], ['logo_path' => $path], $actorId);
+                app(RecordAudit::class)->execute('store.logo_saved', 'store_setting', $store->id, ['logo_path' => $previous], ['logo_path' => $path], $actorId);
 
                 return [$store, $previous];
             }, 3);
@@ -54,11 +54,11 @@ class SaveStoreLogo
     public function remove(int $actorId): void
     {
         $previous = DB::transaction(function () use ($actorId) {
-            $store = StoreSetting::lockForUpdate()->findOrFail(1);
+            $store = StoreSetting::lockCurrent();
             $previous = $store->logo_path;
             if ($previous) {
                 $store->forceFill(['logo_path' => null])->save();
-                app(RecordAudit::class)->execute('store.logo_removed', 'store_setting', 1, ['logo_path' => $previous], [], $actorId);
+                app(RecordAudit::class)->execute('store.logo_removed', 'store_setting', $store->id, ['logo_path' => $previous], [], $actorId);
             }
 
             return $previous;

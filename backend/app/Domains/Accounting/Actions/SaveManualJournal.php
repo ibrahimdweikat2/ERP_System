@@ -18,7 +18,7 @@ class SaveManualJournal
     public function execute(array $data, int $actorId, ?int $id = null): JournalEntry
     {
         return DB::transaction(function () use ($data, $actorId, $id) {
-            $store = StoreSetting::lockForUpdate()->findOrFail(1);
+            $store = StoreSetting::lockCurrent();
             $entry = $id ? JournalEntry::lockForUpdate()->findOrFail($id) : new JournalEntry;
             if ($entry->exists && ($entry->status !== 'draft' || $entry->reference_type !== 'manual')) {
                 throw new BusinessException('JOURNAL_IMMUTABLE', 'لا يمكن تعديل قيد مرحّل. استخدم العكس.');

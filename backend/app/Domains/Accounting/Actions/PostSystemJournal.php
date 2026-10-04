@@ -21,7 +21,7 @@ class PostSystemJournal
         if ($existing) {
             return app(PostJournal::class)->execute($existing->id, $actorId);
         }
-        $currency = $currencySnapshot['currency'] ?? StoreSetting::findOrFail(1)->base_currency;
+        $currency = $currencySnapshot['currency'] ?? StoreSetting::current()->base_currency;
         $rate = $currencySnapshot['exchange_rate'] ?? '1';
         $entry = JournalEntry::create(['journal_id' => Journal::where('code', $journalCode)->firstOrFail()->id, 'entry_date' => $date, 'reference_type' => $source, 'reference_id' => $sourceId, 'reference_event' => $event, 'description' => $description, 'status' => 'draft', 'currency' => $currency, 'exchange_rate' => $rate, 'exchange_rate_date' => $currencySnapshot['exchange_rate_date'] ?? $date, 'exchange_rate_source' => $currencySnapshot['exchange_rate_source'] ?? 'base currency', 'created_by' => $actorId]);
         foreach ($lines as $line) {

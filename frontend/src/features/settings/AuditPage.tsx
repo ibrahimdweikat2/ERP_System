@@ -32,16 +32,29 @@ const labels: Record<string, string> = {
   "roles.saved": "حفظ دور",
   "auth.password_reset": "إعادة تعيين كلمة المرور",
   "users.owner_provisioned": "إنشاء حساب المالك",
+  "auth.login_blocked": "دخول مرفوض (شركة موقوفة)",
+  "company.created": "إنشاء الشركة",
+  "platform.company_created": "إنشاء شركة",
+  "platform.company_updated": "تعديل شركة",
+  "platform.owner_created": "إنشاء مالك لشركة",
+  "platform.superadmin_provisioned": "إنشاء مدير المنصة",
 };
-export function AuditPage() {
+// The same trail for a company ("audit-logs") or for the platform's own actions ("platform/audit-logs").
+export function AuditPage({
+  endpoint = "audit-logs",
+  section = "الإدارة / الرقابة",
+}: {
+  endpoint?: string;
+  section?: string;
+}) {
   const [action, setAction] = useState("");
   const [page, setPage] = useState(1);
   const [detail, setDetail] = useState<Audit | null>(null);
   const q = useQuery({
-    queryKey: ["audit", action, page],
+    queryKey: ["audit", endpoint, action, page],
     queryFn: ({ signal }) =>
       api<Page<Audit>>(
-        `audit-logs?action=${encodeURIComponent(action)}&page=${page}`,
+        `${endpoint}?action=${encodeURIComponent(action)}&page=${page}`,
         { signal },
       ),
   });
@@ -49,7 +62,7 @@ export function AuditPage() {
     <>
       <header className="page-heading">
         <div>
-          <p className="eyebrow">الإدارة / الرقابة</p>
+          <p className="eyebrow">{section}</p>
           <h1>سجل التدقيق</h1>
           <p>تاريخ العمليات مع المستخدم والوقت والتغييرات المسجلة.</p>
         </div>
@@ -81,7 +94,7 @@ export function AuditPage() {
               {
                 key: "actor",
                 label: "المستخدم",
-                render: (a) => a.actor?.name ?? "النظام / زائر",
+                render: (a) => a.actor?.name ?? "إدارة المنصة / النظام",
               },
               {
                 key: "action",

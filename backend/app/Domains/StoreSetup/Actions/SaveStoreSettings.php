@@ -13,7 +13,7 @@ class SaveStoreSettings
     public function execute(array $data): StoreSetting
     {
         return DB::transaction(function () use ($data) {
-            $store = StoreSetting::lockForUpdate()->findOrFail(1);
+            $store = StoreSetting::lockCurrent();
             if ($store->base_currency !== $data['base_currency']) {
                 if ((Schema::hasTable('journal_entries') && DB::table('journal_entries')->exists()) || DB::table('exchange_rates')->exists() || (Schema::hasTable('products') && DB::table('products')->exists())) {
                     throw new BusinessException('BASE_CURRENCY_IN_USE', 'لا يمكن تغيير العملة الأساسية بعد تسجيل أسعار المنتجات أو الصرف أو القيود.');
@@ -23,7 +23,7 @@ class SaveStoreSettings
             }
             $before = $store->toArray();
             $store->update($data);
-            app(RecordAudit::class)->execute('store.settings_updated', 'store_setting', 1, $before, $store->toArray());
+            app(RecordAudit::class)->execute('store.settings_updated', 'store_setting', $store->id, $before, $store->toArray());
 
             return $store;
         }, 3);

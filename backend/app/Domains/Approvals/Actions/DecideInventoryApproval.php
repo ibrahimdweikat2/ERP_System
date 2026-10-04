@@ -16,7 +16,7 @@ class DecideInventoryApproval
     public function execute(int $id, string $decision, string $reason, int $actorId): Approval
     {
         return DB::transaction(function () use ($id, $decision, $reason, $actorId) {
-            StoreSetting::sharedLock()->findOrFail(1);
+            StoreSetting::sharedCurrent();
             $actor = User::findOrFail($actorId);
             if (! $actor->hasPermission('approvals.decide') || ! $actor->hasPermission('inventory.view_cost')) {
                 throw new BusinessException('APPROVAL_PERMISSION_REQUIRED', 'الموافقة على قيمة المخزون تحتاج صلاحية الموافقات وعرض التكلفة.', 403);

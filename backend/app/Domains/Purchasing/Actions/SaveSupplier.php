@@ -14,7 +14,7 @@ class SaveSupplier
     public function execute(array $data, int $actorId, ?int $id = null): Supplier
     {
         return DB::transaction(function () use ($data, $actorId, $id) {
-            StoreSetting::lockForUpdate()->findOrFail(1);
+            StoreSetting::lockCurrent();
             $supplier = $id ? Supplier::lockForUpdate()->findOrFail($id) : new Supplier;
             if ($id && $supplier->version !== (int) $data['version']) {
                 throw new BusinessException('SUPPLIER_VERSION_CONFLICT', 'تغير سجل المورد. أعد تحميل البيانات قبل الحفظ.', 409);

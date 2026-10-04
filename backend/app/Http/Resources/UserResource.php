@@ -9,9 +9,13 @@ class UserResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $company = $this->relationLoaded('company') ? $this->company : null;
+
         return ['id' => $this->id, 'name' => $this->name, 'email' => $this->email,
             'phone' => $this->phone, 'status' => $this->status,
             'roles' => $this->roles->map(fn ($r) => ['id' => $r->id, 'name' => $r->name, 'label' => $r->label]),
-            'permissions' => $this->permissionNames(), 'is_owner' => $this->isOwner(), 'mfa_required' => (bool) $this->mfa_required, 'mfa_enabled' => (bool) $this->mfa_enabled_at, 'last_login_at' => $this->last_login_at];
+            'permissions' => $this->permissionNames(), 'is_owner' => $this->isOwner(), 'is_platform_admin' => $this->isPlatformAdmin(),
+            'company' => $company ? ['id' => $company->id, 'name' => $company->name, 'status' => $company->status] : null,
+            'mfa_required' => (bool) $this->mfa_required, 'mfa_enabled' => (bool) $this->mfa_enabled_at, 'last_login_at' => $this->last_login_at];
     }
 }

@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Domains\Audit\Actions\RecordAudit;
 use App\Domains\Identity\Actions\Totp;
+use App\Domains\Platform\Models\Company;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Support\BusinessException;
+use App\Support\Tenancy\CompanyContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,11 +32,13 @@ class AuthController extends Controller
         $credentials = $request->validated();
         $remember = (bool) ($credentials['remember'] ?? false);
         $request->session()->forget('mfa_login');
-        $user = User::where('email', $credentials['email'])->where('status', 'active')->first();
+        // Emails are unique across the platform, so the account itself identifies its company.
+        $user = app(CompanyContext::class)->bypass(fn () => User::where('email', $credentials['email'])->where('status', 'active')->first());
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
-            $audit->execute('auth.login_failed', 'user', null, after: ['email_hash' => hash('sha256', mb_strtolower($request->string('email')->toString()))]);
+            $this->asAccount($user, fn () => $audit->execute('auth.login_failed', 'user', null, after: ['email_hash' => hash('sha256', mb_strtolower($request->string('email')->toString()))]));
             throw ValidationException::withMessages(['email' => ['البريد الإلكتروني أو كلمة المرور غير صحيحة.']]);
         }
+        $this->ensureCompanyActive($user, $audit);
         // Password verified: MFA users complete a second step before any session login.
         if ($user->mfa_enabled_at || $user->mfa_required) {
             $pending = ['user_id' => $user->id, 'expires' => time() + self::MFA_TTL, 'attempts' => 0, 'remember' => $remember];
@@ -45,7 +49,7 @@ class AuthController extends Controller
             }
             $request->session()->regenerate();
             $request->session()->put('mfa_login', $pending);
-            $audit->execute('auth.mfa_challenge', 'user', $user->id, after: ['mode' => $data['mfa']]);
+            $this->asAccount($user, fn () => $audit->execute('auth.mfa_challenge', 'user', $user->id, after: ['mode' => $data['mfa']]));
 
             return response()->json(['data' => $data]);
         }
@@ -57,11 +61,17 @@ class AuthController extends Controller
     {
         $code = $request->validate(['code' => ['required', 'string', 'max:30']])['code'];
         $pending = $request->session()->get('mfa_login');
-        $user = $pending && $pending['expires'] >= time() ? User::where('status', 'active')->find($pending['user_id']) : null;
+        $user = $pending && $pending['expires'] >= time() ? app(CompanyContext::class)->bypass(fn () => User::where('status', 'active')->find($pending['user_id'])) : null;
         if (! $user) {
             $request->session()->forget('mfa_login');
             throw new BusinessException('MFA_SESSION_EXPIRED', 'انتهت مهلة التحقق. سجّل الدخول من جديد.', 422);
         }
+
+        return $this->asAccount($user, fn () => $this->verifyMfa($request, $user, $pending, $code, $audit, $totp));
+    }
+
+    private function verifyMfa(Request $request, User $user, array $pending, string $code, RecordAudit $audit, Totp $totp): JsonResponse|UserResource
+    {
         $recoveryCodes = null;
         if (isset($pending['secret'])) {
             $step = $totp->match($pending['secret'], trim($code));
@@ -103,12 +113,39 @@ class AuthController extends Controller
 
     private function completeLogin(Request $request, User $user, RecordAudit $audit, bool $remember = false): UserResource
     {
-        Auth::guard('web')->login($user, $remember);
-        $request->session()->regenerate();
-        $request->user()->update(['last_login_at' => now()]);
-        $audit->execute('auth.login', 'user', $request->user()->id);
+        $this->ensureCompanyActive($user, $audit);
 
-        return new UserResource($request->user()->load('roles.permissions'));
+        return $this->asAccount($user, function () use ($request, $user, $audit, $remember) {
+            Auth::guard('web')->login($user, $remember);
+            $request->session()->regenerate();
+            $user->update(['last_login_at' => now()]);
+            $audit->execute('auth.login', 'user', $user->id, actorId: $user->id);
+            $user->isPlatformAdmin() ? $user->setRelation('roles', collect()) : $user->load('roles.permissions', 'company');
+
+            return new UserResource($user);
+        });
+    }
+
+    /** Runs the callback in the account's own context: its company, or the platform for a superadmin. */
+    private function asAccount(?User $user, callable $callback): mixed
+    {
+        $context = app(CompanyContext::class);
+
+        return match (true) {
+            // An unknown email has no company; its failed attempt is recorded at platform level.
+            $user === null => $context->bypass($callback),
+            $user->isPlatformAdmin() => $context->platform($callback),
+            default => $context->run($user->company_id, $callback),
+        };
+    }
+
+    private function ensureCompanyActive(User $user, RecordAudit $audit): void
+    {
+        if ($user->isPlatformAdmin() || Company::find($user->company_id)?->isActive()) {
+            return;
+        }
+        $this->asAccount($user, fn () => $audit->execute('auth.login_blocked', 'user', $user->id, after: ['reason' => 'company_suspended']));
+        throw new BusinessException('COMPANY_SUSPENDED', 'حساب الشركة موقوف. راجع إدارة المنصة.', 403);
     }
 
     public function me(Request $request): UserResource

@@ -30,7 +30,7 @@ class PurchaseOrderWorkflow
 
     private function locked(int $id, int $version): PurchaseOrder
     {
-        StoreSetting::sharedLock()->findOrFail(1);
+        StoreSetting::sharedCurrent();
         $doc = PurchaseOrder::with('lines')->lockForUpdate()->findOrFail($id);
         if ($doc->version !== $version) {
             throw new BusinessException('DOCUMENT_VERSION_CONFLICT', 'تغير أمر الشراء. أعد تحميله.', 409);

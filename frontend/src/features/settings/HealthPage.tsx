@@ -15,7 +15,7 @@ type Health = {
 export function HealthPage() {
   const q = useQuery({
     queryKey: ["health"],
-    queryFn: () => api<ApiEnvelope<Health>>("system/health"),
+    queryFn: () => api<ApiEnvelope<Health>>("platform/system/health"),
     refetchInterval: 30_000,
   });
   const h = q.data?.data;
@@ -23,7 +23,7 @@ export function HealthPage() {
     <>
       <header className="page-heading">
         <div>
-          <p className="eyebrow">الإدارة / التشغيل</p>
+          <p className="eyebrow">المنصة / التشغيل</p>
           <h1>حالة النظام</h1>
           <p>معلومات الاتصال والمهام الخلفية. يتم التحديث كل 30 ثانية.</p>
         </div>

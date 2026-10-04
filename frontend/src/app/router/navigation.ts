@@ -234,7 +234,7 @@ export const navigation: NavGroup[] = [
     label: "الإدارة",
     icon: "admin",
     items: [
-      {label:"المهام والنسخ الاحتياطية",path:"/admin/operations-health",permission:"settings.manage"},{label:"موافقات العمليات",path:"/admin/workflow-approvals"},{label:"السياسات التشغيلية",path:"/admin/operations-policies",permission:"settings.manage"},{label:"سياسة فواتير الموردين",path:"/admin/supplier-invoice-policy",permission:"settings.manage"},{label:"سياسة أوامر الشراء",path:"/admin/purchase-order-policy",permission:"settings.manage"},
+      {label:"موافقات العمليات",path:"/admin/workflow-approvals"},{label:"السياسات التشغيلية",path:"/admin/operations-policies",permission:"settings.manage"},{label:"سياسة فواتير الموردين",path:"/admin/supplier-invoice-policy",permission:"settings.manage"},{label:"سياسة أوامر الشراء",path:"/admin/purchase-order-policy",permission:"settings.manage"},
       { label: "المستخدمون", path: "/admin/users", permission: "users.manage" },
       {
         label: "الأدوار والصلاحيات",
@@ -271,11 +271,6 @@ export const navigation: NavGroup[] = [
         label: "أسعار الصرف",
         path: "/accounting/masters/exchange-rates",
         permission: "accounting.view",
-      },
-      {
-        label: "حالة النظام",
-        path: "/admin/health",
-        permission: "settings.manage",
       },
     ],
   },

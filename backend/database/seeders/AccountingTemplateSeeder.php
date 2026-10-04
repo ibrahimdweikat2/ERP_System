@@ -16,7 +16,7 @@ class AccountingTemplateSeeder extends Seeder
         foreach (['ILS' => 'شيكل إسرائيلي', 'USD' => 'دولار أمريكي', 'JOD' => 'دينار أردني'] as $code => $name) {
             Currency::firstOrCreate(['code' => $code], ['name' => $name, 'decimal_places' => 2, 'is_active' => true, 'is_base' => $code === 'ILS']);
         }
-        StoreSetting::firstOrCreate(['id' => 1]);
+        StoreSetting::query()->firstOrCreate([]);
         $accounts = [
             ['1100', 'النقد في الصندوق', 'Cash on hand', 'asset', false, true, 'cash'],
             ['1110', 'الحساب البنكي', 'Bank', 'asset', false, true, 'bank'],

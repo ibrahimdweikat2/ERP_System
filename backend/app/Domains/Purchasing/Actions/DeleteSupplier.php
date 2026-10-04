@@ -24,7 +24,7 @@ class DeleteSupplier
         DB::transaction(function () use ($id, $actorId) {
             // Same exclusive lock as purchasing postings: nothing can start using the
             // supplier between the check and the delete.
-            StoreSetting::lockForUpdate()->findOrFail(1);
+            StoreSetting::lockCurrent();
             $supplier = Supplier::lockForUpdate()->findOrFail($id);
             $used = $this->usedBy($id);
             // Attachments are immutable records, so a supplier holding one is kept.

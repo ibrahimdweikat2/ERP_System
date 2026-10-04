@@ -32,6 +32,9 @@ import { RolesPage } from "./features/settings/RolesPage";
 import { SequencesPage } from "./features/settings/SequencesPage";
 import { HealthPage } from "./features/settings/HealthPage";
 import { AuditPage } from "./features/settings/AuditPage";
+import { PlatformShell } from "./features/platform/PlatformShell";
+import { CompaniesPage } from "./features/platform/CompaniesPage";
+import { CompanyDetailPage } from "./features/platform/CompanyDetailPage";
 import { StoreSetupPage } from "./features/settings/StoreSetupPage";
 import { MasterPage } from "./features/accounting/MasterPage";
 import { JournalsPage } from "./features/accounting/JournalsPage";
@@ -65,7 +68,24 @@ function RequireAuth() {
         </button>
       </div>
     );
-  return user ? <Outlet /> : <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+  // The superadmin belongs to no company; company pages are not theirs.
+  return user.is_platform_admin ? <Navigate to="/platform" replace /> : <Outlet />;
+}
+function RequirePlatform() {
+  const { user, loading, error, refresh } = useAuth();
+  if (loading) return <Loading />;
+  if (error)
+    return (
+      <div className="state">
+        <ErrorNotice error={error} />
+        <button className="button" onClick={() => void refresh()}>
+          إعادة المحاولة
+        </button>
+      </div>
+    );
+  if (!user) return <Navigate to="/login" replace />;
+  return user.is_platform_admin ? <Outlet /> : <Navigate to="/" replace />;
 }
 function Permit({
   permission,
@@ -100,7 +120,6 @@ function App() {
             <Route element={<RequireAuth />}>
               <Route element={<ErpShell />}>
                 <Route index element={<DashboardPage />} />
-                <Route path="/admin/operations-health" element={<Permit permission="settings.manage"><OperationsHealthPage/></Permit>}/>
                 <Route path="/sales/settlements" element={<Permit permission="sales.view"><CustomerSettlementsPage/></Permit>}/>
                 <Route path="/sales/settlements/:id" element={<Permit permission="sales.view"><CustomerSettlementsPage/></Permit>}/>
                 <Route path="/inventory/warranty" element={<Permit permission="inventory.view"><WarrantyPage/></Permit>}/>
@@ -341,19 +360,31 @@ function App() {
                   }
                 />
                 <Route
-                  path="/admin/health"
-                  element={
-                    <Permit permission="settings.manage">
-                      <HealthPage />
-                    </Permit>
-                  }
-                />
-                <Route
                   path="*"
                   element={
                     <div className="state">
                       <h1>الصفحة غير موجودة</h1>
                       <Link to="/">العودة إلى مساحة العمل</Link>
+                    </div>
+                  }
+                />
+              </Route>
+            </Route>
+            {/* The platform superadmin's own area: companies, owners and shared infrastructure. */}
+            <Route path="/platform" element={<RequirePlatform />}>
+              <Route element={<PlatformShell />}>
+                <Route index element={<CompaniesPage />} />
+                <Route path="companies/:id" element={<CompanyDetailPage />} />
+                <Route path="operations" element={<OperationsHealthPage />} />
+                <Route path="health" element={<HealthPage />} />
+                <Route path="audit" element={<AuditPage endpoint="platform/audit-logs" section="المنصة / الرقابة" />} />
+                <Route path="security" element={<AccountSecurityPage />} />
+                <Route
+                  path="*"
+                  element={
+                    <div className="state">
+                      <h1>الصفحة غير موجودة</h1>
+                      <Link to="/platform">العودة إلى الشركات</Link>
                     </div>
                   }
                 />

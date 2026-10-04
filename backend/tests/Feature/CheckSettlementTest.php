@@ -46,7 +46,7 @@ class CheckSettlementTest extends TestCase
         $this->owner->roles()->attach(Role::where('name', 'owner')->firstOrFail());
         $this->actingAs($this->owner);
         app(CreateFiscalYear::class)->execute(['name' => 'check settlement', 'starts_on' => '2026-01-01', 'ends_on' => '2026-12-31']);
-        StoreSetting::findOrFail(1)->update(['vat_registered' => true]);
+        StoreSetting::current()->update(['vat_registered' => true]);
         $this->cashbox = DB::table('cashboxes')->insertGetId(['name' => 'صندوق اختبار', 'account_id' => Account::where('code', '1100')->value('id'), 'currency_code' => 'ILS', 'active' => true, 'created_at' => now(), 'updated_at' => now()]);
         $this->bank = DB::table('bank_accounts')->insertGetId(['name' => 'بنك اختبار', 'bank_name' => 'بنك اختبار', 'account_number' => '1', 'account_id' => Account::where('code', '1110')->value('id'), 'currency_code' => 'ILS', 'active' => true, 'created_at' => now(), 'updated_at' => now()]);
         $tax = TaxCode::create(['code' => 'ZERO', 'name_ar' => 'صفر للاختبار', 'category' => 'standard', 'rate' => '0', 'effective_from' => '2026-01-01', 'input_account_id' => Account::where('code', '1400')->value('id'), 'output_account_id' => Account::where('code', '2200')->value('id')])->id;

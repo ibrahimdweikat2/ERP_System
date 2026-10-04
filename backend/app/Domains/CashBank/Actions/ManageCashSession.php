@@ -36,7 +36,7 @@ class ManageCashSession {
                 }
             }
             if(Decimal::cmp($variance,'0')!==0){
-                $date=today()->toDateString();$fx=app(CurrencySnapshot::class)->execute($cash->currency_code,$date,StoreSetting::findOrFail(1)->base_currency);$base=Decimal::mul($variance,$fx['exchange_rate']);
+                $date=today()->toDateString();$fx=app(CurrencySnapshot::class)->execute($cash->currency_code,$date,StoreSetting::current()->base_currency);$base=Decimal::mul($variance,$fx['exchange_rate']);
                 app(PostSystemJournal::class)->execute('cashier_session',$id,'variance',$date,$d['reason'],[Posting::line($cash->account_id,$base,$variance),Posting::line('cash_variance',Decimal::sub('0',$base),Decimal::sub('0',$variance))],$actor,'general',$fx);
             }
             DB::table('cashier_sessions')->where('id',$id)->update(['status'=>'closed','counted_amount'=>$d['counted_amount'],'expected_amount'=>$detail->expected_now,'variance'=>$variance,'reason'=>$d['reason'],'closed_at'=>now(),'closed_by'=>$actor,'updated_at'=>now()]);app(RecordAudit::class)->execute('cash.session_closed','cashier_session',$id,null,['counted'=>$d['counted_amount'],'expected'=>$detail->expected_now,'variance'=>$variance,'reason'=>$d['reason']],$actor);return $this->detail($id);

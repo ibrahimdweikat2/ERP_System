@@ -55,7 +55,7 @@ class ManageCheck {
             if(!in_array($c->status,$eligible)||$d['document_date']<$c->last_event_date)throw new BusinessException('CHECK_INVALID_TRANSITION','حالة الشيك أو تاريخ الحركة لا يسمحان بالعملية.');
             Posting::period($d['document_date']);$entry=null;$changes=['status'=>$target,'last_event_date'=>$d['document_date'],'updated_at'=>now()];
             if($event==='clear'){
-                $bank=Posting::treasury('bank',$c->bank_account_id,$c->currency);$fx=app(CurrencySnapshot::class)->execute($c->currency,$d['document_date'],StoreSetting::findOrFail(1)->base_currency);$base=Decimal::mul($c->amount,$fx['exchange_rate']);
+                $bank=Posting::treasury('bank',$c->bank_account_id,$c->currency);$fx=app(CurrencySnapshot::class)->execute($c->currency,$d['document_date'],StoreSetting::current()->base_currency);$base=Decimal::mul($c->amount,$fx['exchange_rate']);
                 $entry=app(PostSystemJournal::class)->execute('check',$id,'clear',$d['document_date'],$d['reason'],[Posting::line($bank,$base,$c->amount),Posting::line('checks_collection',Decimal::sub('0',$c->base_amount),Decimal::sub('0',$c->amount),$c->exchange_rate),Posting::line('exchange_difference',Decimal::sub($c->base_amount,$base),'0')],$actor,'checks',$fx);$changes['cleared_on']=$d['document_date'];
             }
             if(in_array($event,['bounce','return'])){

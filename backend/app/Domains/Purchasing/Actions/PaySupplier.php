@@ -20,7 +20,7 @@ class PaySupplier
     public function save(array $data, int $actor): SupplierPayment
     {
         return DB::transaction(function () use ($data, $actor) {
-            $store = StoreSetting::sharedLock()->findOrFail(1);
+            $store = StoreSetting::sharedCurrent();
             $supplier = Supplier::lockForUpdate()->findOrFail($data['supplier_id']);
             if (! $supplier->active) {
                 throw new BusinessException('SUPPLIER_INACTIVE', 'المورد غير نشط.');

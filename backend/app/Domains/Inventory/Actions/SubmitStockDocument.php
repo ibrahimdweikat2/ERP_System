@@ -17,7 +17,7 @@ class SubmitStockDocument
     public function execute(StockDocumentType $type, int $id, int $version, int $actorId): InventoryDocument
     {
         return DB::transaction(function () use ($type, $id, $version, $actorId) {
-            $store = StoreSetting::sharedLock()->findOrFail(1);
+            $store = StoreSetting::sharedCurrent();
             $class = $type->model();
             $doc = $class::with('lines')->lockForUpdate()->findOrFail($id);
             if ($type === StockDocumentType::Transfer) {

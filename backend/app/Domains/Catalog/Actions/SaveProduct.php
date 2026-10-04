@@ -15,7 +15,7 @@ class SaveProduct
     public function execute(array $data, int $actorId, ?int $id = null): Product
     {
         return DB::transaction(function () use ($data, $actorId, $id) {
-            StoreSetting::lockForUpdate()->findOrFail(1);
+            StoreSetting::lockCurrent();
             $product = $id ? Product::with('barcodes')->lockForUpdate()->findOrFail($id) : new Product;
             if (Decimal::cmp($data['minimum_price'], $data['cash_price']) > 0 || Decimal::cmp($data['minimum_price'], $data['installment_price']) > 0) {
                 throw new BusinessException('PRODUCT_PRICE_BELOW_MINIMUM', 'أسعار البيع يجب ألا تقل عن الحد الأدنى.');

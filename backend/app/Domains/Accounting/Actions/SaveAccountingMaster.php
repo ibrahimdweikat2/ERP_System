@@ -24,7 +24,7 @@ class SaveAccountingMaster
     public function execute(string $kind, array $data, string|int|null $id = null): Model
     {
         return DB::transaction(function () use ($kind, $data, $id) {
-            $store = StoreSetting::lockForUpdate()->findOrFail(1);
+            $store = StoreSetting::lockCurrent();
             $class = self::MODELS[$kind] ?? throw new BusinessException('UNKNOWN_MASTER', 'نوع السجل غير معروف.', 404);
             $record = $id !== null ? $class::lockForUpdate()->findOrFail($id) : new $class;
             $before = $record->exists ? $record->toArray() : null;

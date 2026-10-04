@@ -23,7 +23,7 @@ class PostGoodsReceipt
     public function execute(int $id, int $version, int $actorId): GoodsReceipt
     {
         return DB::transaction(function () use ($id, $version, $actorId) {
-            StoreSetting::sharedLock()->findOrFail(1);
+            StoreSetting::sharedCurrent();
             $doc = GoodsReceipt::with('lines')->lockForUpdate()->findOrFail($id);
             if ($doc->version !== $version) {
                 throw new BusinessException('DOCUMENT_VERSION_CONFLICT', 'تغير سند الاستلام. أعد تحميله.', 409);

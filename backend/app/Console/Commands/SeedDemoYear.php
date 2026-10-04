@@ -22,6 +22,7 @@ use App\Domains\Sales\Actions\PostSalesInvoice;
 use App\Domains\Sales\Actions\SaveSalesInvoice;
 use App\Domains\Tax\Models\TaxCode;
 use App\Models\User;
+use App\Support\Tenancy\CompanyContext;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -32,7 +33,7 @@ use Illuminate\Support\Facades\DB;
  */
 class SeedDemoYear extends Command
 {
-    protected $signature = 'erp:demo-year {--force : Run although the store already holds documents}';
+    protected $signature = 'erp:demo-year {--company=1 : Company that receives the demonstration data} {--force : Run although the store already holds documents}';
 
     protected $description = 'Seed a full demonstration year of catalog, purchasing, sales, installments and checks';
 
@@ -67,7 +68,12 @@ class SeedDemoYear extends Command
 
     private array $counts = ['products' => 0, 'suppliers' => 0, 'customers' => 0, 'purchase_orders' => 0, 'receipts' => 0, 'supplier_invoices' => 0, 'supplier_payments' => 0, 'sales' => 0, 'installment_sales' => 0, 'payments' => 0, 'checks' => 0, 'expenses' => 0];
 
-    public function handle(): int
+    public function handle(CompanyContext $context): int
+    {
+        return $context->run((int) $this->option('company'), fn () => $this->seedYear());
+    }
+
+    private function seedYear(): int
     {
         mt_srand(20260101);
         $existing = DB::table('sales_invoices')->count() + DB::table('goods_receipts')->count();

@@ -60,7 +60,7 @@ class DeleteDraftDocument
         $rejected = null;
         DB::transaction(function () use ($kind, $id, $actorId, $config, &$rejected) {
             // Same exclusive lock as posting: the draft cannot be posted while it is being removed.
-            StoreSetting::lockForUpdate()->findOrFail(1);
+            StoreSetting::lockCurrent();
             $doc = DB::table($config['table'])->where('id', $id)->lockForUpdate()->first();
             abort_unless($doc, 404);
             if (! in_array($doc->status, $config['statuses'], true)) {

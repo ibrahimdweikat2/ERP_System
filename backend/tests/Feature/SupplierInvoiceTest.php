@@ -49,7 +49,7 @@ class SupplierInvoiceTest extends TestCase
         $this->owner->roles()->attach(Role::where('name', 'owner')->firstOrFail());
         $this->actingAs($this->owner);
         app(CreateFiscalYear::class)->execute(['name' => 'invoice test', 'starts_on' => '2026-01-01', 'ends_on' => '2026-12-31']);
-        StoreSetting::findOrFail(1)->update(['vat_registered' => true]);
+        StoreSetting::current()->update(['vat_registered' => true]);
         $this->supplier = app(SaveSupplier::class)->execute(['code' => 'PI-SUP', 'legal_name' => 'مورد فواتير اختبار', 'currency' => 'ILS', 'contacts' => [], 'payment_terms_days' => 30, 'credit_limit' => '0', 'active' => true], $this->owner->id)->id;
         $this->product = app(SaveProduct::class)->execute(['sku' => 'PI-PROD', 'name_ar' => 'منتج فواتير', 'unit_id' => Unit::firstOrFail()->id, 'serial_tracked' => false, 'active' => true, 'cash_price' => '200', 'installment_price' => '220', 'minimum_price' => '150', 'reorder_level' => '1', 'barcodes' => []], $this->owner->id)->id;
         $this->tax = TaxCode::create(['code' => 'TEST10', 'name_ar' => 'ضريبة اختبار فقط', 'category' => 'standard', 'rate' => '10', 'effective_from' => '2026-01-01', 'input_account_id' => Account::where('code', '1400')->value('id'), 'output_account_id' => Account::where('code', '2200')->value('id')])->id;
@@ -121,7 +121,7 @@ class SupplierInvoiceTest extends TestCase
         ExchangeRate::create(['currency_code' => 'USD', 'rate_date' => '2026-08-01', 'rate_to_base' => '3.5', 'source' => 'receipt rate', 'created_by' => $this->owner->id, 'created_at' => now()]);
         $receipt = $this->receipt('1', '100', 'USD');
         ExchangeRate::create(['currency_code' => 'USD', 'rate_date' => '2026-09-01', 'rate_to_base' => '4', 'source' => 'invoice rate', 'created_by' => $this->owner->id, 'created_at' => now()]);
-        PurchasingInvoicePolicy::findOrFail(1)->update(['price_variance_mode' => 'post_to_expense', 'price_variance_account_id' => Account::where('code', '6400')->value('id')]);
+        PurchasingInvoicePolicy::current()->update(['price_variance_mode' => 'post_to_expense', 'price_variance_account_id' => Account::where('code', '6400')->value('id')]);
         $data = $this->data($receipt, ['variance_reason' => 'فرق سعر مثبت في فاتورة المورد']);
         $data['lines'][0]['unit_price'] = '110';
         $draft = $this->draft($data);
@@ -182,14 +182,14 @@ class SupplierInvoiceTest extends TestCase
     public function test_nonrecoverable_tax_requires_explicit_policy_and_recoverable_tax_requires_registration(): void
     {
         $data = $this->data($this->receipt('1'));
-        StoreSetting::findOrFail(1)->update(['vat_registered' => false]);
+        StoreSetting::current()->update(['vat_registered' => false]);
         $invoice = $this->draft($data);
         $this->rejectPosting($invoice, 'INPUT_VAT_NOT_ELIGIBLE');
         $data['version'] = 1;
         $data['lines'][0]['tax_recoverable'] = false;
         $invoice = app(SaveSupplierInvoice::class)->execute($data, $this->owner->id, $invoice->id);
         $this->rejectPosting($invoice, 'NONRECOVERABLE_TAX_BLOCKED');
-        PurchasingInvoicePolicy::findOrFail(1)->update(['version' => 2, 'nonrecoverable_tax_mode' => 'expense', 'nonrecoverable_tax_account_id' => Account::where('code', '6400')->value('id')]);
+        PurchasingInvoicePolicy::current()->update(['version' => 2, 'nonrecoverable_tax_mode' => 'expense', 'nonrecoverable_tax_account_id' => Account::where('code', '6400')->value('id')]);
         $this->rejectPosting($invoice, 'INVOICE_POLICY_CHANGED');
         $data['version'] = 2;
         $invoice = app(SaveSupplierInvoice::class)->execute($data, $this->owner->id, $invoice->id);
@@ -227,7 +227,7 @@ class SupplierInvoiceTest extends TestCase
     public function test_private_attachment_is_required_when_configured_and_download_checks_parent_authority(): void
     {
         Storage::fake('documents');
-        PurchasingInvoicePolicy::findOrFail(1)->update(['require_attachment' => true]);
+        PurchasingInvoicePolicy::current()->update(['require_attachment' => true]);
         $invoice = $this->draft($this->data($this->receipt('1')));
         $this->rejectPosting($invoice, 'INVOICE_ATTACHMENT_REQUIRED');
         $content = "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF";

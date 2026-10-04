@@ -5,9 +5,8 @@ import {
   NavLink,
   Outlet,
   useLocation,
-  useNavigate,
 } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -27,6 +26,7 @@ import {
   PanelRightClose,
 } from "lucide-react";
 import { useAuth } from "../lib/auth/context";
+import { useLogout } from "../lib/auth/useLogout";
 import { navigation } from "../app/router/navigation";
 import { api } from "../lib/api/client";
 import { ErrorNotice } from "./ui/Primitives";
@@ -46,7 +46,6 @@ const icons = {
 export function ErpShell() {
   const { user, can } = useAuth();
   const location = useLocation();
-  const client = useQueryClient();
   const store = useQuery({
     queryKey: ["store-context"],
     queryFn: () =>
@@ -59,7 +58,6 @@ export function ErpShell() {
         };
       }>("store/context"),
   });
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   // Accordion: one menu group open at a time, starting with the group of the current page.
   const groupOf = (path: string) =>
@@ -82,8 +80,7 @@ export function ErpShell() {
   const platformName = store.data?.data.platform_name || "دفتر";
   const logoUrl = store.data?.data.logo_url;
   useBrandHead(platformName, logoUrl);
-  const [error, setError] = useState<unknown>();
-  const [loggingOut, setLoggingOut] = useState(false);
+  const { logout, pending: loggingOut, error } = useLogout();
   return (
     <div className="erp-layout">
       <aside className={"sidebar " + (open ? "mobile-open" : "")}>
@@ -98,7 +95,7 @@ export function ErpShell() {
             </span>
             <span className="brand-name">
               {platformName}
-              <small>إدارة متجر الأجهزة</small>
+              <small>{user?.company?.name ?? "إدارة متجر الأجهزة"}</small>
             </span>
           </Link>
           <button
@@ -178,7 +175,8 @@ export function ErpShell() {
               <Menu size={21} />
             </button>
             <span>
-              المتجر <span className="slash">/</span> مساحة العمل
+              {user?.company?.name ?? "المتجر"} <span className="slash">/</span>{" "}
+              مساحة العمل
             </span>
           </div>
           <div className="user-controls">
@@ -191,22 +189,7 @@ export function ErpShell() {
               className="icon-button"
               aria-label="تسجيل الخروج"
               disabled={loggingOut}
-              onClick={async () => {
-                setLoggingOut(true);
-                try {
-                  await api("auth/logout", { method: "POST" });
-                  await client.cancelQueries();
-                  client.setQueryData(["me"], null);
-                  client.removeQueries({
-                    predicate: (query) => query.queryKey[0] !== "me",
-                  });
-                  navigate("/login", { replace: true });
-                } catch (e) {
-                  setError(e);
-                } finally {
-                  setLoggingOut(false);
-                }
-              }}
+              onClick={() => void logout()}
             >
               <LogOut size={18} />
             </button>
@@ -219,7 +202,7 @@ export function ErpShell() {
           <Outlet key={location.pathname} />
         </main>
         <footer className="workspace-footer">
-          <span>دفتر · إدارة متجر واحد</span>
+          <span>دفتر · {user?.company?.name ?? "إدارة المتجر"}</span>
           <span>
             {store.data && `العملة الأساسية: ${store.data.data.base_currency}`}
           </span>
