@@ -40,7 +40,7 @@ class VerifyTenancy extends Command
             $column = TenancySchema::column($table, 'company_id');
             $nullable = TenantTables::kind($table) === TenantTables::NULLABLE;
             if (! $column) {
-                $problems[] = "$table has no company_id column (add it, or list the table in config/tenancy.php).";
+                $problems[] = "$table has no company_id column (add it, or list the table in App\Support\Tenancy\TenantTables).";
 
                 continue;
             }

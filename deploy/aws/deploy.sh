@@ -42,16 +42,17 @@ sudo chown -R apache:apache backend/storage backend/bootstrap/cache
 sudo chgrp apache backend/.env
 sudo chmod 640 backend/.env
 
+echo "== Caches =="
+# Before migrating: artisan must read this release's config and routes, never the previous release's cache.
+art config:cache
+art route:cache
+
 echo "== Database =="
 art migrate --force
 if $FIRST; then
-  # Roles, permissions, chart of accounts, policies. No users are created.
+  # Permissions, then company 1's roles, chart of accounts and policies. No users are created.
   art db:seed --force
 fi
-
-echo "== Caches =="
-art config:cache
-art route:cache
 
 echo "== Restart services =="
 sudo systemctl reload php-fpm
@@ -67,6 +68,9 @@ echo "API health: $code"
 [ "$code" = "200" ] || { echo "Check: sudo tail -50 $APP_DIR/backend/storage/logs/laravel.log and sudo tail -50 /var/log/nginx/error.log" >&2; exit 1; }
 if $FIRST; then
   echo
-  echo "Create the owner account (you type the password):"
-  echo "  sudo -u apache php $APP_DIR/backend/artisan erp:create-owner your@email.com"
+  echo "Create the owner account of company 1 (you type the password):"
+  echo "  sudo -u apache php $APP_DIR/backend/artisan erp:create-owner your@email.com --company=1"
 fi
+echo
+echo "Platform superadmin (creates companies and their owners), once per server:"
+echo "  sudo -u apache php $APP_DIR/backend/artisan erp:create-superadmin admin@your-domain.com"
