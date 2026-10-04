@@ -28,7 +28,7 @@ class DeleteCustomer
         DB::transaction(function () use ($id, $actorId) {
             // Same exclusive lock as sales and receipts: nothing can start using the
             // customer between the check and the delete.
-            StoreSetting::lockForUpdate()->findOrFail(1);
+            StoreSetting::lockCurrent();
             $customer = Customer::lockForUpdate()->findOrFail($id);
             $used = $this->usedBy($id);
             // Attachments are immutable records, so a customer holding one is kept.

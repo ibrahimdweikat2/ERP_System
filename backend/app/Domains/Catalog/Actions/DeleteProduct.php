@@ -31,7 +31,7 @@ class DeleteProduct
         $imagePath = DB::transaction(function () use ($id, $actorId) {
             // Same exclusive lock as SaveProduct and stock postings: nothing can start
             // using the product between the check and the delete.
-            StoreSetting::lockForUpdate()->findOrFail(1);
+            StoreSetting::lockCurrent();
             $product = Product::with('barcodes')->lockForUpdate()->findOrFail($id);
             if ($used = $this->usedBy($id)) {
                 throw new BusinessException('PRODUCT_IN_USE', 'لا يمكن حذف منتج مستخدم في مستندات أو حركات مخزون ('.implode('، ', $used).'). عطّله بدلاً من ذلك بإلغاء «منتج نشط».', 409);

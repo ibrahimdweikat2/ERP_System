@@ -18,7 +18,7 @@ class AccountingSetupController extends Controller
 {
     public function settings(): JsonResponse
     {
-        return response()->json(['data' => StoreSetting::findOrFail(1)]);
+        return response()->json(['data' => StoreSetting::current()]);
     }
 
     public function saveSettings(Request $r, SaveStoreSettings $action): JsonResponse

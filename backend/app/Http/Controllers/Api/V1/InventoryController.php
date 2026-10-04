@@ -18,7 +18,7 @@ class InventoryController extends Controller
 {
     public function settings(): JsonResponse
     {
-        return response()->json(['data' => ['base_currency' => StoreSetting::findOrFail(1)->base_currency, 'valuation_policy' => 'moving_average_per_location']]);
+        return response()->json(['data' => ['base_currency' => StoreSetting::current()->base_currency, 'valuation_policy' => 'moving_average_per_location']]);
     }
 
     private function filters(Request $r): array
@@ -51,7 +51,9 @@ class InventoryController extends Controller
             $q->whereHas('location', fn ($q) => $q->where('active', true)->where('sellable', true))->whereHas('product', fn ($q) => $q->where('active', true))->where('qty_available', '>', 0);
         }
         if ($d['low_stock'] ?? false) {
-            $q->whereRaw('product_id IN (SELECT p.id FROM products p WHERE p.active=1 AND p.reorder_level>COALESCE((SELECT SUM(b.qty_available) FROM inventory_balances b JOIN stock_locations l ON l.id=b.location_id WHERE b.product_id=p.id AND l.active=1 AND l.sellable=1),0))');
+            // Built with the query builder (not raw SQL) so every table is company-filtered.
+            $available = DB::table('inventory_balances as b')->join('stock_locations as l', 'l.id', '=', 'b.location_id')->where('l.active', true)->where('l.sellable', true)->selectRaw('b.product_id, SUM(b.qty_available) AS available')->groupBy('b.product_id');
+            $q->whereIn('product_id', DB::table('products as p')->leftJoinSub($available, 'a', 'a.product_id', '=', 'p.id')->where('p.active', true)->whereRaw('p.reorder_level > COALESCE(a.available,0)')->select('p.id'));
         }
         $page = $q->orderBy('product_id')->orderBy('location_id')->paginate(\App\Support\PerPage::resolve(25));
         $page->through(function ($row) use ($r) {

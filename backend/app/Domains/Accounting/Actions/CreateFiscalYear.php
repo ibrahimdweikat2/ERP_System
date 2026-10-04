@@ -14,7 +14,7 @@ class CreateFiscalYear
     public function execute(array $data): FiscalYear
     {
         return DB::transaction(function () use ($data) {
-            StoreSetting::lockForUpdate()->findOrFail(1);
+            StoreSetting::lockCurrent();
             if (FiscalYear::where('starts_on', '<=', $data['ends_on'])->where('ends_on', '>=', $data['starts_on'])->exists()) {
                 throw new BusinessException('FISCAL_YEAR_OVERLAP', 'الفترة المختارة تتداخل مع سنة مالية موجودة.');
             }

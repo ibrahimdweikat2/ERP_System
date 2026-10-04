@@ -20,7 +20,7 @@ class PostStockDocument
     public function execute(StockDocumentType $type, int $id, int $version, int $actorId): InventoryDocument
     {
         return DB::transaction(function () use ($type, $id, $version, $actorId) {
-            StoreSetting::sharedLock()->findOrFail(1);
+            StoreSetting::sharedCurrent();
             $class = $type->model();
             $doc = $class::with(['lines', 'approval'])->lockForUpdate()->findOrFail($id);
             if ($doc->version !== $version) {

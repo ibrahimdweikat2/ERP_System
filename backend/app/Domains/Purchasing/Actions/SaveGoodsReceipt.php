@@ -17,7 +17,7 @@ class SaveGoodsReceipt
     public function execute(array $data, int $actorId, ?int $id = null): GoodsReceipt
     {
         return DB::transaction(function () use ($data, $actorId, $id) {
-            $store = StoreSetting::sharedLock()->findOrFail(1);
+            $store = StoreSetting::sharedCurrent();
             $doc = $id ? GoodsReceipt::with('lines')->lockForUpdate()->findOrFail($id) : new GoodsReceipt;
             if ($id && ($doc->status !== 'draft' || $doc->version !== (int) $data['version'])) {
                 throw new BusinessException('RECEIPT_NOT_EDITABLE', 'سند الاستلام مرحّل أو تغيرت نسخته.', 409);

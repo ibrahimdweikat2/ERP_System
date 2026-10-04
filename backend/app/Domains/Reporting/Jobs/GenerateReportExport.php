@@ -4,6 +4,7 @@ use App\Domains\Reporting\Actions\ReportEngine;
 use App\Domains\Reporting\Actions\ReconcileLedgers;
 use App\Domains\Audit\Actions\RecordAudit;
 use App\Models\User;
+use App\Support\Tenancy\CompanyContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -25,5 +26,6 @@ class GenerateReportExport implements ShouldQueue {
         rewind($temp);Storage::disk('documents')->put($path,$temp);fclose($temp);
         DB::table('report_exports')->where('id',$row->id)->update(['status'=>'completed','stored_path'=>$path,'row_count'=>$count,'completed_at'=>now(),'expires_at'=>now()->addDays(7),'updated_at'=>now()]);app(RecordAudit::class)->execute('reports.export_completed','report_export',$row->id,null,['report'=>$row->report,'rows'=>$count],$row->requested_by);
     }
-    public function failed(\Throwable $e):void{DB::table('report_exports')->where('id',$this->exportId)->update(['status'=>'failed','error'=>'تعذر تجهيز التقرير. راجع حالة العامل ثم أعد الطلب.','updated_at'=>now()]);}
+    // May run after a timeout without the job's company context; the export id alone identifies the row.
+    public function failed(\Throwable $e):void{app(CompanyContext::class)->bypass(fn()=>DB::table('report_exports')->where('id',$this->exportId)->update(['status'=>'failed','error'=>'تعذر تجهيز التقرير. راجع حالة العامل ثم أعد الطلب.','updated_at'=>now()]));}
 }

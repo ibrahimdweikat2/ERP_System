@@ -29,7 +29,7 @@ class SettleCustomer {
         $doc=DB::table('customer_settlements')->where('id',$id)->lockForUpdate()->first();abort_unless($doc,404);if($doc->status==='posted')return $doc;
         Posting::period($doc->document_date);Customer::lockForUpdate()->findOrFail($doc->customer_id);$sale=SalesInvoice::lockForUpdate()->findOrFail($doc->sales_invoice_id);$b=app(CustomerLedger::class)->invoice($sale);$d=json_decode($doc->payload,true,512,JSON_THROW_ON_ERROR);
         $last=DB::table('customer_ledger_entries')->where('customer_id',$doc->customer_id)->where('currency',$doc->currency)->max('posting_date');if($last&&$doc->document_date<$last)throw new BusinessException('SETTLEMENT_BACKDATED','تاريخ التسوية لا يسبق آخر حركة للعميل بهذه العملة.');
-        $fx=app(CurrencySnapshot::class)->execute($doc->currency,$doc->document_date,StoreSetting::findOrFail(1)->base_currency);$gl=[];$allocations=[];$paymentId=null;
+        $fx=app(CurrencySnapshot::class)->execute($doc->currency,$doc->document_date,StoreSetting::current()->base_currency);$gl=[];$allocations=[];$paymentId=null;
         if($doc->kind==='early_settlement'){
             if($b!==$d['balance'])throw new BusinessException('SETTLEMENT_BALANCE_CHANGED','تغير الرصيد منذ طلب الخصم؛ أنشئ طلباً محدثاً.');
             app(BusinessApproval::class)->require($doc->approval_id,$d,'installments');if(Decimal::cmp($doc->amount,$b['remaining'])>=0)throw new BusinessException('DISCOUNT_TOO_LARGE','الخصم يجب أن يقل عن الرصيد المتبقي.');

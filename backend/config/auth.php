@@ -63,7 +63,8 @@ return [
 
     'providers' => [
         'users' => [
-            'driver' => 'eloquent',
+            // Eloquent, but resolves the session user before a company context exists.
+            'driver' => 'company-aware',
             'model' => env('AUTH_MODEL', User::class),
         ],
 

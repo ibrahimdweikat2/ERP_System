@@ -23,7 +23,7 @@ class AccountMappingController extends Controller
         $d = $r->validate(['account_id' => ['required', 'integer', 'exists:accounts,id'], 'reason' => ['required', 'string', 'min:5', 'max:1000']]);
 
         return DB::transaction(function () use ($key, $d) {
-            StoreSetting::lockForUpdate()->findOrFail(1);
+            StoreSetting::lockCurrent();
             $mapping = DB::table('account_mappings')->where('key', $key)->lockForUpdate()->first();
             abort_unless($mapping, 404);
             $old = Account::findOrFail($mapping->account_id);

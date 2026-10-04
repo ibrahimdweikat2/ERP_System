@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Middleware\EnsurePlatformAdmin;
+use App\Http\Middleware\EnsureTenantUser;
 use App\Http\Middleware\RequireActiveUser;
 use App\Http\Middleware\RequirePermission;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use App\Support\BusinessException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,7 +18,12 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php', health: '/up')
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
-        $middleware->alias(['active' => RequireActiveUser::class, 'permission' => RequirePermission::class]);
+        $middleware->alias(['active' => RequireActiveUser::class, 'permission' => RequirePermission::class, 'tenant' => EnsureTenantUser::class, 'platform' => EnsurePlatformAdmin::class]);
+        // The company context must exist before route-model binding resolves {product} etc.,
+        // so these run straight after authentication instead of after SubstituteBindings.
+        $middleware->appendToPriorityList(AuthenticatesRequests::class, RequireActiveUser::class);
+        $middleware->appendToPriorityList(RequireActiveUser::class, EnsureTenantUser::class);
+        $middleware->appendToPriorityList(EnsureTenantUser::class, EnsurePlatformAdmin::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(fn (Request $request, Throwable $e) => $request->is('api/*') || $request->expectsJson());

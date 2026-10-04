@@ -19,7 +19,7 @@ class ReceiveCustomerPayment
     public function save(array $data,int $actor): CustomerPayment
     {
         return DB::transaction(function()use($data,$actor){
-            $store=StoreSetting::sharedLock()->findOrFail(1); $customer=Customer::lockForUpdate()->findOrFail($data['customer_id']);
+            $store=StoreSetting::sharedCurrent(); $customer=Customer::lockForUpdate()->findOrFail($data['customer_id']);
             if(!$customer->active || Decimal::cmp($data['amount'],'0')<=0)throw new BusinessException('PAYMENT_INVALID','اختر عميلاً نشطاً ومبلغاً موجباً.');
             $fx=app(CurrencySnapshot::class)->execute($data['currency'],$data['document_date'],$store->base_currency);
             $doc=CustomerPayment::create([...$fx,'customer_id'=>$customer->id,'customer_snapshot'=>$customer->identity(),'document_date'=>$data['document_date'],'method'=>$data['method'],'amount'=>$data['amount'],'base_amount'=>Decimal::mul($data['amount'],$fx['exchange_rate']),'cashbox_id'=>$data['method']==='cash'?$data['cashbox_id']:null,'bank_account_id'=>$data['method']==='bank'?$data['bank_account_id']:null,'payment_reference'=>$data['payment_reference']??null,'notes'=>$data['notes']??null,'allocation_request'=>$data['allocations']??[],'created_by'=>$actor]);

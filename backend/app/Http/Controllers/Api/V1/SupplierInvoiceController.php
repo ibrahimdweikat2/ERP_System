@@ -81,7 +81,7 @@ class SupplierInvoiceController extends Controller
 
     public function policy(): JsonResponse
     {
-        return response()->json(['data' => PurchasingInvoicePolicy::findOrFail(1)]);
+        return response()->json(['data' => PurchasingInvoicePolicy::current()]);
     }
 
     public function policyAccounts(): JsonResponse
@@ -94,8 +94,8 @@ class SupplierInvoiceController extends Controller
         $d = $r->validate(['version' => ['required', 'integer', 'min:1'], 'price_variance_mode' => ['required', Rule::in(['block', 'post_to_expense'])], 'price_variance_account_id' => ['nullable', 'required_if:price_variance_mode,post_to_expense', 'integer', 'exists:accounts,id'], 'nonrecoverable_tax_mode' => ['required', Rule::in(['block', 'expense'])], 'nonrecoverable_tax_account_id' => ['nullable', 'required_if:nonrecoverable_tax_mode,expense', 'integer', 'exists:accounts,id'], 'require_attachment' => ['required', 'boolean'], 'reason' => ['required', 'string', 'min:5', 'max:1000']]);
 
         return DB::transaction(function () use ($d, $r) {
-            StoreSetting::lockForUpdate()->findOrFail(1);
-            $policy = PurchasingInvoicePolicy::lockForUpdate()->findOrFail(1);
+            StoreSetting::lockCurrent();
+            $policy = PurchasingInvoicePolicy::lockCurrent();
             if ($policy->version !== (int) $d['version']) {
                 throw new BusinessException('POLICY_VERSION_CONFLICT', 'تغيرت السياسة. أعد تحميلها.', 409);
             }

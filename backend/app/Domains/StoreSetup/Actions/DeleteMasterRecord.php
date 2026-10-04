@@ -31,7 +31,7 @@ class DeleteMasterRecord
     public function execute(string $kind, string $model, int|string $id, int $actorId): void
     {
         DB::transaction(function () use ($kind, $model, $id, $actorId) {
-            StoreSetting::lockForUpdate()->findOrFail(1);
+            StoreSetting::lockCurrent();
             $table = (new $model)->getTable();
             $key = (new $model)->getKeyName();
             $row = DB::table($table)->where($key, $id)->lockForUpdate()->first();

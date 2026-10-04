@@ -2,11 +2,14 @@
 
 namespace App\Domains\StoreSetup\Models;
 
+use App\Support\Tenancy\CompanySingleton;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
 class StoreSetting extends Model
 {
+    use CompanySingleton;
+
     protected $guarded = ['id'];
 
     protected $hidden = ['logo_path'];

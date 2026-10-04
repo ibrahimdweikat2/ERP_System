@@ -35,7 +35,7 @@ class AccountingSetupTest extends TestCase
     public function test_no_live_vat_rate_or_opening_balance_is_invented(): void
     {
         $this->assertSame(0, DB::table('tax_codes')->count());
-        $this->assertSame('ILS', StoreSetting::findOrFail(1)->base_currency);
+        $this->assertSame('ILS', StoreSetting::current()->base_currency);
         $this->assertDatabaseHas('account_mappings', ['key' => 'ar']);
     }
 

@@ -25,8 +25,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         loading: query.isPending,
         error: query.error,
+        // The platform superadmin holds no company permission.
         can: (p) =>
-          !p || (!!user && (user.is_owner || user.permissions.includes(p))),
+          !p ||
+          (!!user &&
+            !user.is_platform_admin &&
+            (user.is_owner || user.permissions.includes(p))),
         refresh: async () => {
           await client.invalidateQueries({ queryKey: ["me"] });
         },

@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 class ManageExpense {
     public function save(array $d,int $actor):object {
         return DB::transaction(function()use($d,$actor){
-            $store=StoreSetting::sharedLock()->findOrFail(1);$fx=app(CurrencySnapshot::class)->execute($d['currency'],$d['document_date'],$store->base_currency);
+            $store=StoreSetting::sharedCurrent();$fx=app(CurrencySnapshot::class)->execute($d['currency'],$d['document_date'],$store->base_currency);
             $account=Account::sharedLock()->findOrFail($d['account_id']);if(!$account->active||$account->is_control_account||$account->account_type!=='expense')throw new BusinessException('EXPENSE_ACCOUNT_INVALID','اختر حساب مصروف نشطاً غير رقابي.');
             $tax=app(CalculateDocumentTax::class)->execute(['quantity'=>'1','unit_price'=>$d['amount'],'discount_amount'=>'0','tax_code_id'=>$d['tax_code_id'],'tax_inclusive'=>$d['tax_inclusive']],$d['document_date']);
             $taxCode=TaxCode::sharedLock()->findOrFail($d['tax_code_id']);$payload=[...$d,...$tax,'tax_account_id'=>$taxCode->input_account_id];unset($payload['currency'],$payload['document_date'],$payload['description']);
@@ -35,7 +35,7 @@ class ManageExpense {
             Posting::period($d->document_date);$policy=app(BusinessApproval::class)->policy('treasury');if(Decimal::cmp($d->base_amount,$policy['expense_approval_threshold'])>=0)app(BusinessApproval::class)->require($d->approval_id,$this->payload($d),'treasury');
             $p=json_decode($d->payload,true,512,JSON_THROW_ON_ERROR);$account=Account::sharedLock()->findOrFail($p['account_id']);if(!$account->active||$account->account_type!=='expense'||$account->is_control_account)throw new BusinessException('EXPENSE_ACCOUNT_INVALID','حساب المصروف غير صالح.');
             $cash=Posting::treasury($p['method'],$p[$p['method']==='cash'?'cashbox_id':'bank_account_id'],$d->currency);$net=Decimal::mul($p['taxable_base'],$d->exchange_rate);$tax=Decimal::mul($p['tax_amount'],$d->exchange_rate);$gl=[];
-            if($p['tax_recoverable'] && Decimal::cmp($tax,'0')>0){$ta=Account::sharedLock()->find($p['tax_account_id']);if(!StoreSetting::findOrFail(1)->vat_registered||!$ta||!$ta->active||!$ta->is_control_account||$ta->account_type!=='asset')throw new BusinessException('INPUT_VAT_INVALID','استرداد الضريبة يحتاج تسجيلاً ضريبياً وحساب مدخلات صالحاً.');$gl[]=Posting::line($ta->id,$tax,$p['tax_amount']);}
+            if($p['tax_recoverable'] && Decimal::cmp($tax,'0')>0){$ta=Account::sharedLock()->find($p['tax_account_id']);if(!StoreSetting::current()->vat_registered||!$ta||!$ta->active||!$ta->is_control_account||$ta->account_type!=='asset')throw new BusinessException('INPUT_VAT_INVALID','استرداد الضريبة يحتاج تسجيلاً ضريبياً وحساب مدخلات صالحاً.');$gl[]=Posting::line($ta->id,$tax,$p['tax_amount']);}
             else {$net=Decimal::add($net,$tax);}
             $gl[]=Posting::line($account->id,$net,$p['tax_recoverable']?$p['taxable_base']:$d->amount);$gl[]=Posting::line($cash,Decimal::sub('0',$d->base_amount),Decimal::sub('0',$d->amount));
             $entry=app(PostSystemJournal::class)->execute('expense',$id,'expense',$d->document_date,$d->description,$gl,$actor,'payments',(array)$d);$number=app(NextDocumentNumber::class)->execute('expense',$d->document_date);

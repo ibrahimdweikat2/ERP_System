@@ -69,7 +69,7 @@ class CatalogMasterController extends Controller
         $data = $r->validate($rules);
 
         return DB::transaction(function () use ($kind, $class, $id, $data) {
-            StoreSetting::lockForUpdate()->findOrFail(1);
+            StoreSetting::lockCurrent();
             $record = $id ? $class::lockForUpdate()->findOrFail($id) : new $class;
             $before = $record->exists ? $record->toArray() : null;
             if ($kind === 'units' && $id && (int) $record->decimal_places !== (int) $data['decimal_places'] && Schema::hasTable('inventory_movements') && DB::table('inventory_movements')->join('products', 'products.id', '=', 'inventory_movements.product_id')->where('products.unit_id', $id)->exists()) {

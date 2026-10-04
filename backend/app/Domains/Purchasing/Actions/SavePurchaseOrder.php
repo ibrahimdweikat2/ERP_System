@@ -19,7 +19,7 @@ class SavePurchaseOrder
     public function execute(array $data, int $actorId, ?int $id = null): PurchaseOrder
     {
         return DB::transaction(function () use ($data, $actorId, $id) {
-            $store = StoreSetting::sharedLock()->findOrFail(1);
+            $store = StoreSetting::sharedCurrent();
             $doc = $id ? PurchaseOrder::with(['lines', 'approval'])->lockForUpdate()->findOrFail($id) : new PurchaseOrder;
             if ($id && ($doc->status === 'issued' || $doc->version !== (int) $data['version'])) {
                 throw new BusinessException('PURCHASE_ORDER_NOT_EDITABLE', 'أمر الشراء صادر أو تغيرت نسخته. أعد تحميله.', 409);

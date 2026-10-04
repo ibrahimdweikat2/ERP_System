@@ -15,6 +15,9 @@ export type User = {
   roles: Role[];
   permissions: PermissionName[];
   is_owner: boolean;
+  // The platform superadmin manages companies and belongs to none of them.
+  is_platform_admin: boolean;
+  company: { id: number; name: string; status: "active" | "suspended" } | null;
   mfa_required?: boolean;
   mfa_enabled?: boolean;
   last_login_at: string | null;

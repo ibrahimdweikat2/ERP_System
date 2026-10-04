@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 class TransferCash {
     public function save(array $d,int $actor):object {
         return DB::transaction(function()use($d,$actor){
-            $fx=app(CurrencySnapshot::class)->execute($d['currency'],$d['document_date'],StoreSetting::findOrFail(1)->base_currency);if(Decimal::cmp($d['amount'],'0')<=0)throw new BusinessException('AMOUNT_REQUIRED','أدخل مبلغاً موجباً.');
+            $fx=app(CurrencySnapshot::class)->execute($d['currency'],$d['document_date'],StoreSetting::current()->base_currency);if(Decimal::cmp($d['amount'],'0')<=0)throw new BusinessException('AMOUNT_REQUIRED','أدخل مبلغاً موجباً.');
             $id=DB::table('cash_transfers')->insertGetId([...$fx,'document_date'=>$d['document_date'],'amount'=>$d['amount'],'base_amount'=>Decimal::mul($d['amount'],$fx['exchange_rate']),'description'=>$d['description'],'payload'=>json_encode($d,JSON_THROW_ON_ERROR),'created_by'=>$actor,'created_at'=>now(),'updated_at'=>now()]);
             $doc=DB::table('cash_transfers')->find($id);$p=app(BusinessApproval::class)->policy('treasury');if(Decimal::cmp($doc->base_amount,$p['expense_approval_threshold'])>=0){$a=app(BusinessApproval::class)->request('cash_transfer',$id,1,'treasury',$this->payload($doc),$d['description'],$actor);DB::table('cash_transfers')->where('id',$id)->update(['approval_id'=>$a]);}app(RecordAudit::class)->execute('cash.transfer_created','cash_transfer',$id,null,$d,$actor);return DB::table('cash_transfers')->find($id);
         },5);

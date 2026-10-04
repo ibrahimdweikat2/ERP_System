@@ -21,8 +21,8 @@ class PostSupplierInvoice
     public function execute(int $id, int $version, int $actorId): SupplierInvoice
     {
         return DB::transaction(function () use ($id, $version, $actorId) {
-            $store = StoreSetting::sharedLock()->findOrFail(1);
-            $policy = PurchasingInvoicePolicy::sharedLock()->findOrFail(1);
+            $store = StoreSetting::sharedCurrent();
+            $policy = PurchasingInvoicePolicy::sharedCurrent();
             $doc = SupplierInvoice::with('lines')->lockForUpdate()->findOrFail($id);
             if ($doc->version !== $version) {
                 throw new BusinessException('DOCUMENT_VERSION_CONFLICT', 'تغيرت الفاتورة. أعد تحميلها.', 409);

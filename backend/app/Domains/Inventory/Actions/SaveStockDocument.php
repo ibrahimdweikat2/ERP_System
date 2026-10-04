@@ -17,7 +17,7 @@ class SaveStockDocument
     public function execute(StockDocumentType $type, array $data, int $actorId, ?int $id = null): InventoryDocument
     {
         return DB::transaction(function () use ($type, $data, $actorId, $id) {
-            StoreSetting::sharedLock()->findOrFail(1);
+            StoreSetting::sharedCurrent();
             $class = $type->model();
             $doc = $id ? $class::with('lines')->lockForUpdate()->findOrFail($id) : new $class;
             if ($id && $doc->status === 'posted') {

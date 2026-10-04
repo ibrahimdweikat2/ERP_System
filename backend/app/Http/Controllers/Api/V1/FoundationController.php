@@ -16,15 +16,13 @@ class FoundationController extends Controller
 {
     public function storeContext(): JsonResponse
     {
-        return response()->json(['data' => StoreSetting::findOrFail(1)->only(['trade_name', 'platform_name', 'logo_url', 'legal_name', 'address', 'phone', 'tax_number', 'vat_registered', 'invoice_footer', 'base_currency', 'timezone', 'locale'])]);
+        return response()->json(['data' => StoreSetting::current()->only(['trade_name', 'platform_name', 'logo_url', 'legal_name', 'address', 'phone', 'tax_number', 'vat_registered', 'invoice_footer', 'base_currency', 'timezone', 'locale'])]);
     }
 
-    // Public (pre-login): only what the sign-in page displays, never other store details.
+    // Public (pre-login): no company is known yet, so the sign-in page shows the platform's name.
     public function branding(): JsonResponse
     {
-        $store = StoreSetting::find(1);
-
-        return response()->json(['data' => ['platform_name' => $store?->platform_name, 'logo_url' => $store?->logoUrl()]]);
+        return response()->json(['data' => ['platform_name' => config('erp.platform_name'), 'logo_url' => null]]);
     }
 
     public function sequences(): JsonResponse
@@ -51,7 +49,7 @@ class FoundationController extends Controller
 
     public function health(): JsonResponse
     {
-        $version = DB::selectOne('SELECT VERSION() AS version')->version;
+        $version = DB::connection()->getServerVersion();
 
         return response()->json(['data' => ['database' => ['engine' => 'MySQL', 'version' => $version, 'connected' => true],
             'queue' => ['connection' => config('queue.default'), 'pending' => DB::table('jobs')->count(), 'failed' => DB::table('failed_jobs')->count(),

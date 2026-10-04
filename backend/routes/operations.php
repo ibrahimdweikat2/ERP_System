@@ -13,11 +13,8 @@ use App\Http\Controllers\Api\V1\OperationsController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\DocumentController;
 use App\Http\Controllers\Api\V1\NotificationController;
-use App\Http\Controllers\Api\V1\MfaController;
 
 // Included inside the authenticated v1 group.
-Route::get('operations/health',[\App\Http\Controllers\Api\V1\OperationsHealthController::class,'status'])->middleware('permission:settings.manage');
-Route::post('operations/backups',[\App\Http\Controllers\Api\V1\OperationsHealthController::class,'backup'])->middleware('permission:settings.manage');
 Route::get('customer-settlements',[\App\Http\Controllers\Api\V1\CustomerSettlementController::class,'index'])->middleware('permission:sales.view');
 Route::post('customer-settlements',[\App\Http\Controllers\Api\V1\CustomerSettlementController::class,'store']);
 Route::get('customer-settlements/{id}',[\App\Http\Controllers\Api\V1\CustomerSettlementController::class,'show'])->middleware('permission:sales.view');
@@ -105,10 +102,6 @@ Route::post('documents/{type}/{id}',[DocumentController::class,'store']);
 Route::get('documents/{type}/{id}/{attachment}/download',[DocumentController::class,'download']);
 Route::get('notifications',[NotificationController::class,'index']);
 Route::post('notifications/{id}/read',[NotificationController::class,'read']);
-Route::get('auth/mfa',[MfaController::class,'status']);
-Route::post('auth/mfa/setup',[MfaController::class,'setup'])->middleware('throttle:6,1');
-Route::post('auth/mfa/enable',[MfaController::class,'enable'])->middleware('throttle:6,1');
-Route::post('auth/mfa/disable',[MfaController::class,'disable'])->middleware('throttle:6,1');
 Route::get('purchasing/open-invoices',[SupplierSettlementController::class,'openInvoices'])->middleware('permission:purchasing.view');
 Route::get('suppliers/{supplier}/statement',[SupplierSettlementController::class,'statement'])->middleware('permission:purchasing.view');
 foreach (['payments'=>'pay','credit-notes'=>'invoice'] as $kind=>$permission) {
