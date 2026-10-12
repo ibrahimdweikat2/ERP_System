@@ -15,6 +15,11 @@ use App\Http\Controllers\Api\V1\DocumentController;
 use App\Http\Controllers\Api\V1\NotificationController;
 
 // Included inside the authenticated v1 group.
+// The company's own backups; the whole-platform backup stays in routes/platform.php.
+Route::get('backups',[\App\Http\Controllers\Api\V1\CompanyBackupController::class,'index'])->middleware('permission:backups.manage');
+Route::post('backups',[\App\Http\Controllers\Api\V1\CompanyBackupController::class,'store'])->middleware(['permission:backups.manage','throttle:6,1']);
+Route::get('backups/{id}/download',[\App\Http\Controllers\Api\V1\CompanyBackupController::class,'download'])->whereNumber('id')->middleware('permission:backups.manage');
+Route::delete('backups/{id}',[\App\Http\Controllers\Api\V1\CompanyBackupController::class,'destroy'])->whereNumber('id')->middleware('permission:backups.manage');
 Route::get('customer-settlements',[\App\Http\Controllers\Api\V1\CustomerSettlementController::class,'index'])->middleware('permission:sales.view');
 Route::post('customer-settlements',[\App\Http\Controllers\Api\V1\CustomerSettlementController::class,'store']);
 Route::get('customer-settlements/{id}',[\App\Http\Controllers\Api\V1\CustomerSettlementController::class,'show'])->middleware('permission:sales.view');

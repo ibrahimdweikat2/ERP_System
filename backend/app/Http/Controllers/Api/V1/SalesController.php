@@ -16,7 +16,6 @@ use App\Support\BusinessException;
 use App\Support\IdempotentRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 class SalesController extends Controller {
     private function present(SalesInvoice $doc,Request $r):array{

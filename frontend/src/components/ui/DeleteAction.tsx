@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
@@ -12,6 +12,7 @@ import { ErrorNotice, Modal } from "./Primitives";
 export function DeleteDialog({
   title,
   name,
+  message,
   note,
   endpoint,
   onClose,
@@ -19,6 +20,8 @@ export function DeleteDialog({
 }: {
   title: string;
   name: string;
+  /** Replaces the default warning when deleting something other than a database record. */
+  message?: ReactNode;
   note?: string;
   endpoint: string;
   onClose: () => void;
@@ -36,10 +39,12 @@ export function DeleteDialog({
   return (
     <Modal title={title} onClose={() => !remove.isPending && onClose()}>
       <div className="padded-form">
-        <p>
-          سيُحذف <strong>{name}</strong> نهائياً. لا يمكن التراجع عن هذه
-          العملية، لكن نسخة منه تبقى في سجل التدقيق.
-        </p>
+        {message ?? (
+          <p>
+            سيُحذف <strong>{name}</strong> نهائياً. لا يمكن التراجع عن هذه
+            العملية، لكن نسخة منه تبقى في سجل التدقيق.
+          </p>
+        )}
         {note && <p className="muted">{note}</p>}
         <ErrorNotice error={remove.error} />
         <footer className="form-actions">

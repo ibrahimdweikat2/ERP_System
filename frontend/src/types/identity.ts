@@ -1,5 +1,5 @@
 export type PermissionName =
-  `${"sales" | "installments" | "checks" | "inventory" | "purchasing" | "accounting" | "reports" | "catalog" | "customers" | "payments" | "cashbank" | "expenses" | "approvals" | "audit" | "users" | "roles" | "settings"}.${string}`;
+  `${"sales" | "installments" | "checks" | "inventory" | "purchasing" | "accounting" | "reports" | "catalog" | "customers" | "payments" | "cashbank" | "expenses" | "approvals" | "audit" | "users" | "roles" | "settings" | "backups"}.${string}`;
 export type Role = {
   id: number;
   name: string;

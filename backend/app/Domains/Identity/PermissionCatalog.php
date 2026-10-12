@@ -16,7 +16,7 @@ final class PermissionCatalog
         'customers' => 'view,manage,delete', 'payments' => 'view,receive',
         'cashbank' => 'view,manage', 'expenses' => 'view,create,approve',
         'approvals' => 'view,decide', 'audit' => 'view',
-        'users' => 'manage', 'roles' => 'manage', 'settings' => 'manage',
+        'users' => 'manage', 'roles' => 'manage', 'settings' => 'manage', 'backups' => 'manage',
     ];
 
     /** @return list<string> */
