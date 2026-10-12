@@ -17,6 +17,8 @@ export type User = {
   is_owner: boolean;
   // The platform superadmin manages companies and belongs to none of them.
   is_platform_admin: boolean;
+  // The company holds a valid license; without one users reach only the dashboard.
+  licensed: boolean;
   company: { id: number; name: string; status: "active" | "suspended" } | null;
   mfa_required?: boolean;
   mfa_enabled?: boolean;

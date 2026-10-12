@@ -24,6 +24,8 @@ class TenantTables
         'sessions', 'password_reset_tokens', 'cache', 'cache_locks',
         'jobs', 'job_batches', 'failed_jobs',
         'queue_probe_runs', 'backup_runs',
+        // Rows name their company explicitly; only App\Domains\Licensing\CompanyLicensing reads them.
+        'company_licenses',
     ];
 
     /** Rows belong to a company, or to the platform when company_id is NULL (superadmins and their audit trail). */

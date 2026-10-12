@@ -99,7 +99,6 @@ Route::post('bank-statement-lines',[TreasuryController::class,'statementLine'])-
 Route::post('bank-reconciliation',[TreasuryController::class,'reconcile'])->middleware('permission:cashbank.manage');
 Route::get('reports/catalog',[ReportController::class,'catalog']);
 Route::get('reports/{report}',[ReportController::class,'report']);
-Route::get('dashboard',[ReportController::class,'dashboard']);
 Route::match(['GET','POST'],'report-exports',[ReportController::class,'exports']);
 Route::get('report-exports/{id}/download',[ReportController::class,'download']);
 Route::get('documents/{type}/{id}',[DocumentController::class,'index']);

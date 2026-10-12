@@ -15,6 +15,7 @@ class UserResource extends JsonResource
             'phone' => $this->phone, 'status' => $this->status,
             'roles' => $this->roles->map(fn ($r) => ['id' => $r->id, 'name' => $r->name, 'label' => $r->label]),
             'permissions' => $this->permissionNames(), 'is_owner' => $this->isOwner(), 'is_platform_admin' => $this->isPlatformAdmin(),
+            'licensed' => $this->companyLicensed(),
             'company' => $company ? ['id' => $company->id, 'name' => $company->name, 'status' => $company->status] : null,
             'mfa_required' => (bool) $this->mfa_required, 'mfa_enabled' => (bool) $this->mfa_enabled_at, 'last_login_at' => $this->last_login_at];
     }

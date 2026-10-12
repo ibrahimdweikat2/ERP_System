@@ -37,6 +37,7 @@ import { PlatformShell } from "./features/platform/PlatformShell";
 import { CompaniesPage } from "./features/platform/CompaniesPage";
 import { CompanyDetailPage } from "./features/platform/CompanyDetailPage";
 import { StoreSetupPage } from "./features/settings/StoreSetupPage";
+import { LicensePage } from "./features/settings/LicensePage";
 import { MasterPage } from "./features/accounting/MasterPage";
 import { JournalsPage } from "./features/accounting/JournalsPage";
 import { PeriodsPage } from "./features/accounting/PeriodsPage";
@@ -88,6 +89,22 @@ function RequirePlatform() {
   if (!user) return <Navigate to="/login" replace />;
   return user.is_platform_admin ? <Outlet /> : <Navigate to="/" replace />;
 }
+/** Every company page except the dashboard and the license page needs a valid company license. */
+function RequireLicense() {
+  const { user } = useAuth();
+  if (user?.licensed) return <Outlet />;
+  return (
+    <div className="state">
+      <h1>الترخيص مطلوب</h1>
+      <p>لا يوجد ترخيص فعّال لهذه الشركة، لذلك تتاح لوحة المتجر فقط.</p>
+      {user?.is_owner ? (
+        <Link to="/admin/license">إضافة ترخيص الشركة</Link>
+      ) : (
+        <Link to="/">العودة إلى لوحة المتجر</Link>
+      )}
+    </div>
+  );
+}
 function Permit({
   permission,
   children,
@@ -121,6 +138,8 @@ function App() {
             <Route element={<RequireAuth />}>
               <Route element={<ErpShell />}>
                 <Route index element={<DashboardPage />} />
+                <Route path="/admin/license" element={<LicensePage />} />
+                <Route element={<RequireLicense />}>
                 <Route path="/sales/settlements" element={<Permit permission="sales.view"><CustomerSettlementsPage/></Permit>}/>
                 <Route path="/sales/settlements/:id" element={<Permit permission="sales.view"><CustomerSettlementsPage/></Permit>}/>
                 <Route path="/inventory/warranty" element={<Permit permission="inventory.view"><WarrantyPage/></Permit>}/>
@@ -368,6 +387,7 @@ function App() {
                     </Permit>
                   }
                 />
+                </Route>
                 <Route
                   path="*"
                   element={

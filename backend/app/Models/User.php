@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Domains\Identity\Models\Role;
+use App\Domains\Licensing\CompanyLicensing;
 use App\Domains\Platform\Models\Company;
 use App\Support\Tenancy\CompanyContext;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -59,7 +60,14 @@ class User extends Authenticatable
 
     public function hasPermission(string $permission): bool
     {
-        return $this->status === 'active' && ! $this->isPlatformAdmin() && ($this->isOwner() || $this->roles->contains(fn (Role $r) => $r->permissions->contains('name', $permission)));
+        return $this->status === 'active' && ! $this->isPlatformAdmin() && $this->companyLicensed()
+            && ($this->isOwner() || $this->roles->contains(fn (Role $r) => $r->permissions->contains('name', $permission)));
+    }
+
+    /** Without a valid company license nobody in the company holds any permission (the dashboard stays open). */
+    public function companyLicensed(): bool
+    {
+        return ! $this->isPlatformAdmin() && app(CompanyLicensing::class)->isValid($this->company_id);
     }
 
     public function permissionNames(): array
