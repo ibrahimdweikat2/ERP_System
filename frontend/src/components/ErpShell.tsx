@@ -109,10 +109,14 @@ export function ErpShell() {
         <nav aria-label="التنقل الرئيسي">
           {navigation.map((g) => {
             const Icon = icons[g.icon as keyof typeof icons];
+            // Without a company license only the dashboard (and the owner's license page) is listed.
             const items = g.items.filter(
               (i) =>
-                can(i.permission) ||
-                (i.permission === "catalog.view" && can("catalog.manage")),
+                (user?.licensed || i.unlicensed) &&
+                (i.ownerOnly
+                  ? !!user?.is_owner
+                  : can(i.permission) ||
+                    (i.permission === "catalog.view" && can("catalog.manage"))),
             );
             if (!items.length) return null;
             return (
@@ -197,6 +201,18 @@ export function ErpShell() {
         </header>
         <main className="page-content">
           <ErrorNotice error={error} />
+          {user && !user.licensed && location.pathname !== "/admin/license" && (
+            <div className="notice warning" role="status">
+              <p>
+                لا يوجد ترخيص فعّال لهذه الشركة، لذلك تظهر لوحة المتجر فقط.{" "}
+                {user.is_owner ? (
+                  <Link to="/admin/license">أضف ترخيص الشركة ←</Link>
+                ) : (
+                  "راجع مالك الشركة لإضافة الترخيص."
+                )}
+              </p>
+            </div>
+          )}
           {/* Keyed by path: screens that share one component (lists, master data,
               stock documents) start fresh instead of inheriting page and filters. */}
           <Outlet key={location.pathname} />

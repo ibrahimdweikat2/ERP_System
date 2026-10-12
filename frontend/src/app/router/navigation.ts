@@ -3,6 +3,9 @@ export type NavItem = {
   label: string;
   path?: string;
   permission?: PermissionName;
+  // Shown while the company has no valid license (every other item is hidden then).
+  unlicensed?: boolean;
+  ownerOnly?: boolean;
 };
 export type NavGroup = { label: string; icon: string; items: NavItem[] };
 export const navigation: NavGroup[] = [
@@ -10,7 +13,7 @@ export const navigation: NavGroup[] = [
   {
     label: "مساحة العمل",
     icon: "home",
-    items: [{ label: "لوحة المتجر", path: "/" },{label:"التنبيهات",path:"/notifications"},{label:"أمان حسابي",path:"/account/security"},{label:"مركز التقارير",path:"/reports"}],
+    items: [{ label: "لوحة المتجر", path: "/", unlicensed: true },{label:"التنبيهات",path:"/notifications"},{label:"أمان حسابي",path:"/account/security"},{label:"مركز التقارير",path:"/reports"}],
   },
   {
     label: "المبيعات",
@@ -258,6 +261,7 @@ export const navigation: NavGroup[] = [
         path: "/admin/setup",
         permission: "settings.manage",
       },
+      { label: "ترخيص الشركة", path: "/admin/license", ownerOnly: true, unlicensed: true },
       {
         label: "تسلسل المستندات",
         path: "/admin/sequences",

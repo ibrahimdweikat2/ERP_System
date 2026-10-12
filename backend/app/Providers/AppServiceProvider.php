@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domains\Licensing\CompanyLicensing;
 use App\Support\Tenancy\CompanyAwareUserProvider;
 use App\Support\Tenancy\CompanyContext;
 use App\Support\Tenancy\TenantMySqlConnection;
@@ -26,6 +27,8 @@ class AppServiceProvider extends ServiceProvider
         Connection::resolverFor('mysql', fn ($pdo, $database, $prefix, $config) => new TenantMySqlConnection($pdo, $database, $prefix, $config));
         // Scoped: queue workers reset it between jobs, so no job inherits another's company.
         $this->app->scoped(CompanyContext::class);
+        // Caches each company's license validity for one request or job only.
+        $this->app->scoped(CompanyLicensing::class);
     }
 
     public function boot(): void

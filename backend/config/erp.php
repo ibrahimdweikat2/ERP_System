@@ -3,4 +3,18 @@ return ['backup_directory'=>env('ERP_BACKUP_DIRECTORY',storage_path('app/backups
     // Shown on the login page, before anyone (and so any company) is known.
     'platform_name'=>env('ERP_PLATFORM_NAME','دفتر'),
     // Name given to company 1 when the installation has no store name yet.
-    'default_company_name'=>env('ERP_DEFAULT_COMPANY_NAME','الشركة الأولى')];
+    'default_company_name'=>env('ERP_DEFAULT_COMPANY_NAME','الشركة الأولى'),
+    // Company licenses, activated against a LicenseBox server (see App\Domains\Licensing).
+    // Without a valid license a company's users see only the dashboard.
+    'license'=>[
+        'enforce'=>(bool) env('ERP_LICENSE_ENFORCE',true),
+        'server_url'=>env('LICENSEBOX_SERVER_URL'),
+        'product_id'=>env('LICENSEBOX_PRODUCT_ID'),
+        // An external API key of that product; never an internal one.
+        'api_key'=>env('LICENSEBOX_API_KEY'),
+        // The server's RSA public key (LicenseBox: storage/app/private/keys/public.pem). Every response is checked against it.
+        'public_key_path'=>env('LICENSEBOX_PUBLIC_KEY_PATH') ?: storage_path('app/private/licensebox-public.pem'),
+        // Domain reported on activation; defaults to the host of FRONTEND_URL.
+        'domain'=>env('ERP_LICENSE_DOMAIN'),
+        'timeout'=>(int) env('LICENSEBOX_TIMEOUT',15),
+    ]];
