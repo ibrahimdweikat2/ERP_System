@@ -88,3 +88,30 @@ Artisan::command('erp:create-superadmin {email} {--name=مدير المنصة} {
 
     return 0;
 })->purpose('Provision a platform superadmin interactively; no default password');
+Artisan::command('erp:license-check', function (\App\Domains\Licensing\LicenseServer $server) {
+    $this->line('Config cached: '.(app()->configurationIsCached() ? 'yes (run `php artisan config:cache` again after editing .env)' : 'no'));
+    $this->line('Enforced: '.(config('erp.license.enforce') ? 'yes' : 'no').' | Domain sent on activation: '.($server->domain() ?? '(none)'));
+    if ($problems = $server->problems()) {
+        foreach ($problems as $problem) {
+            $this->error($problem);
+        }
+
+        return 1;
+    }
+    // A signed round trip proves the URL, API key, product and public key together.
+    try {
+        $response = $server->call('check_connection');
+    } catch (\RuntimeException $e) {
+        $this->error($e->getMessage());
+
+        return 1;
+    }
+    if (! $response['status']) {
+        $this->error('Server refused: '.($response['reason'] ?? '').' '.$response['message']);
+
+        return 1;
+    }
+    $this->info('Connected to '.($response['data']['server'] ?? 'LicenseBox').', key id '.($response['data']['key_id'] ?? '?').'. Licenses can be activated.');
+
+    return 0;
+})->purpose('Diagnose the connection to the LicenseBox license server');

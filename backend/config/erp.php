@@ -14,6 +14,10 @@ return ['backup_directory'=>env('ERP_BACKUP_DIRECTORY',storage_path('app/backups
         'api_key'=>env('LICENSEBOX_API_KEY'),
         // The server's RSA public key (LicenseBox: storage/app/private/keys/public.pem). Every response is checked against it.
         'public_key_path'=>env('LICENSEBOX_PUBLIC_KEY_PATH') ?: storage_path('app/private/licensebox-public.pem'),
+        // Or let the key be downloaded once from the server's public URL into public_key_path;
+        // it is accepted only when its fingerprint equals the Key ID shown on LicenseBox's Settings page.
+        'public_key_url'=>env('LICENSEBOX_PUBLIC_KEY_URL'),
+        'key_id'=>env('LICENSEBOX_KEY_ID'),
         // Domain reported on activation; defaults to the host of FRONTEND_URL.
         'domain'=>env('ERP_LICENSE_DOMAIN'),
         'timeout'=>(int) env('LICENSEBOX_TIMEOUT',15),

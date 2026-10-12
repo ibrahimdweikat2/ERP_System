@@ -3,6 +3,7 @@
 namespace App\Domains\Licensing;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -16,11 +17,33 @@ class LicenseServer
     /** @var array<string, string> */
     private array $pem = [];
 
+    private ?string $keyProblem = null;
+
     public function configured(): bool
     {
-        $c = config('erp.license');
+        return $this->problems() === [];
+    }
 
-        return filled($c['server_url']) && filled($c['product_id']) && filled($c['api_key']) && $this->publicKey() !== null;
+    /**
+     * What keeps the connection from working, one line per setting (empty when configured).
+     * Shown by `php artisan erp:license-check`; never to company users.
+     *
+     * @return list<string>
+     */
+    public function problems(): array
+    {
+        $c = config('erp.license');
+        $problems = [];
+        foreach (['server_url' => 'LICENSEBOX_SERVER_URL', 'product_id' => 'LICENSEBOX_PRODUCT_ID', 'api_key' => 'LICENSEBOX_API_KEY'] as $key => $env) {
+            if (blank($c[$key] ?? null)) {
+                $problems[] = "$env is empty.";
+            }
+        }
+        if ($this->publicKey() === null) {
+            $problems[] = $this->keyProblem ?? 'No public key.';
+        }
+
+        return $problems;
     }
 
     /**
@@ -105,14 +128,98 @@ class LicenseServer
         return $key !== null && $raw !== false && $raw !== '' && openssl_verify($data, $raw, $key, OPENSSL_ALGO_SHA256) === 1;
     }
 
+    /**
+     * The server's public key: the file at public_key_path, or, when that file does not exist
+     * yet, downloaded once from public_key_url and saved there. A downloaded key is accepted
+     * only if its fingerprint equals key_id (LicenseBox Settings -> Key ID), so a wrong or
+     * forged download is never trusted. A file is checked against key_id too when one is set.
+     */
     private function publicKey(): ?string
     {
         $path = (string) config('erp.license.public_key_path');
-        if ($path === '' || ! is_file($path)) {
+        $keyId = strtolower(trim((string) config('erp.license.key_id')));
+        if (isset($this->pem[$path])) {
+            return $this->pem[$path];
+        }
+        $this->keyProblem = null;
+
+        if ($path !== '' && is_file($path)) {
+            if (! is_readable($path)) {
+                $this->keyProblem = "Public key file is not readable by the web server user: $path";
+
+                return null;
+            }
+            $pem = (string) file_get_contents($path);
+            // A saved key from before the server's keypair was regenerated: fetch the current one.
+            if ($keyId !== '' && filled(config('erp.license.public_key_url')) && substr(hash('sha256', $pem), 0, 16) !== $keyId) {
+                $pem = $this->download($path, $keyId);
+                if ($pem === null) {
+                    return null;
+                }
+            }
+        } else {
+            $pem = $this->download($path, $keyId);
+            if ($pem === null) {
+                return null;
+            }
+        }
+
+        if (! str_contains($pem, 'PUBLIC KEY') || openssl_pkey_get_public($pem) === false) {
+            $this->keyProblem = "Not a PEM public key: $path";
+
             return null;
         }
-        $pem = $this->pem[$path] ??= (string) file_get_contents($path);
+        if ($keyId !== '' && ($actual = substr(hash('sha256', $pem), 0, 16)) !== $keyId) {
+            $this->keyProblem = "Public key fingerprint $actual does not match LICENSEBOX_KEY_ID $keyId.";
 
-        return str_contains($pem, 'PUBLIC KEY') ? $pem : null;
+            return null;
+        }
+
+        return $this->pem[$path] = $pem;
+    }
+
+    private function download(string $path, string $keyId): ?string
+    {
+        $url = (string) config('erp.license.public_key_url');
+        if ($url === '') {
+            $this->keyProblem = "Public key file not found: $path (set LICENSEBOX_PUBLIC_KEY_PATH to an existing file, or LICENSEBOX_PUBLIC_KEY_URL with LICENSEBOX_KEY_ID).";
+
+            return null;
+        }
+        if ($keyId === '') {
+            $this->keyProblem = 'LICENSEBOX_KEY_ID is required with LICENSEBOX_PUBLIC_KEY_URL: a downloaded key is trusted only when it matches it.';
+
+            return null;
+        }
+        // An unreachable URL is retried at most every five minutes, not on every request.
+        if ($failure = Cache::get('licensebox.public_key.failure')) {
+            $this->keyProblem = $failure;
+
+            return null;
+        }
+        try {
+            $response = Http::timeout(10)->connectTimeout(5)->get($url);
+            $pem = $response->successful() ? $response->body() : null;
+            $failure = $pem === null ? "Public key download failed (HTTP {$response->status()}): $url" : null;
+        } catch (ConnectionException $e) {
+            $pem = null;
+            $failure = "Public key download failed: {$e->getMessage()}";
+        }
+        if ($pem !== null && substr(hash('sha256', $pem), 0, 16) !== $keyId) {
+            $pem = null;
+            $failure = 'Downloaded public key fingerprint '.substr(hash('sha256', (string) $response->body()), 0, 16)." does not match LICENSEBOX_KEY_ID $keyId.";
+        }
+        if ($pem === null) {
+            Cache::put('licensebox.public_key.failure', $failure, now()->addMinutes(5));
+            $this->keyProblem = $failure;
+
+            return null;
+        }
+        // Saved so later requests read the file; if storage is not writable the key still works for this request.
+        if ($path !== '' && (is_dir(dirname($path)) || @mkdir(dirname($path), 0750, true))) {
+            @file_put_contents($path, $pem, LOCK_EX);
+        }
+
+        return $pem;
     }
 }

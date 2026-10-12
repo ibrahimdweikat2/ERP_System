@@ -4,9 +4,11 @@ namespace Tests\Feature;
 
 use App\Domains\Identity\Models\Role;
 use App\Domains\Licensing\CompanyLicensing;
+use App\Domains\Licensing\LicenseServer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -213,6 +215,30 @@ class CompanyLicenseTest extends TestCase
         $this->getJson('/api/v1/products')->assertForbidden();
     }
 
+    public function test_the_public_key_can_come_from_the_server_url_pinned_by_its_key_id(): void
+    {
+        $saved = $this->dir.'/downloaded.pem';
+        $fingerprint = substr(hash('sha256', file_get_contents($this->dir.'/public.pem')), 0, 16);
+        config(['erp.license.public_key_path' => $saved, 'erp.license.public_key_url' => 'https://licenses.test/public-key.pem']);
+        $server = fn () => $this->app->make(LicenseServer::class);
+
+        // Without the Key ID a downloaded key is never trusted.
+        $this->assertStringContainsString('LICENSEBOX_KEY_ID is required', implode(' ', $server()->problems()));
+
+        // A Key ID that does not match the download (wrong server, forged key) is refused.
+        config(['erp.license.key_id' => '0000000000000000']);
+        $this->assertStringContainsString('does not match LICENSEBOX_KEY_ID', implode(' ', $server()->problems()));
+        $this->assertFileDoesNotExist($saved);
+
+        Cache::forget('licensebox.public_key.failure');
+        config(['erp.license.key_id' => strtoupper($fingerprint)]);
+        $this->assertSame([], $server()->problems());
+        $this->assertFileEquals($this->dir.'/public.pem', $saved);
+
+        $this->actingAs($this->companyOwner(1));
+        $this->postJson('/api/v1/company-license', ['license_key' => self::KEY])->assertOk()->assertJsonPath('data.valid', true);
+    }
+
     private function activate(int $companyId): void
     {
         $owner = $this->companyOwner($companyId);
@@ -255,6 +281,9 @@ class CompanyLicenseTest extends TestCase
             return Http::failedConnection();
         }
         $endpoint = basename(parse_url($request->url(), PHP_URL_PATH));
+        if ($endpoint === 'public-key.pem') {
+            return Http::response(file_get_contents($this->dir.'/public.pem'));
+        }
         $reply = ($this->server)($endpoint, $request->data());
         $payload = ['status' => $reply[0], 'message' => $reply[1], 'data' => $reply[2]];
         if (isset($reply[3])) {
