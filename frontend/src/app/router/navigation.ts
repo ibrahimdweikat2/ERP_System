@@ -252,6 +252,7 @@ export const navigation: NavGroup[] = [
         permission: "settings.manage",
       },
       { label: "سجل التدقيق", path: "/admin/audit", permission: "audit.view" },
+      { label: "النسخ الاحتياطي", path: "/admin/backups", permission: "backups.manage" },
       {
         label: "إعدادات المتجر",
         path: "/admin/setup",

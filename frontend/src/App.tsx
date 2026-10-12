@@ -27,6 +27,7 @@ import "./features/operations/operations.css";
 import { CustomerSettlementsPage } from "./features/operations/CustomerSettlementsPage";
 import { WarrantyPage } from "./features/operations/WarrantyPage";
 import { OperationsHealthPage } from "./features/operations/OperationsHealthPage";
+import { BackupsPage } from "./features/operations/BackupsPage";
 import { UsersPage } from "./features/settings/UsersPage";
 import { RolesPage } from "./features/settings/RolesPage";
 import { SequencesPage } from "./features/settings/SequencesPage";
@@ -348,6 +349,14 @@ function App() {
                   element={
                     <Permit permission="audit.view">
                       <AuditPage />
+                    </Permit>
+                  }
+                />
+                <Route
+                  path="/admin/backups"
+                  element={
+                    <Permit permission="backups.manage">
+                      <BackupsPage />
                     </Permit>
                   }
                 />
